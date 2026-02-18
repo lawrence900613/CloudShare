@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FileShare Test UI</title>
+    <title>Drive UI</title>
     <style>
         :root {
-            --bg: #f4f6f8;
+            --bg: #f3f7fb;
             --card: #ffffff;
             --text: #1f2937;
             --muted: #6b7280;
-            --accent: #0f766e;
-            --accent-2: #115e59;
+            --accent: #0369a1;
             --danger: #b91c1c;
             --border: #d1d5db;
         }
@@ -19,11 +18,11 @@
         body {
             margin: 0;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f8fafc, #ecfeff);
+            background: linear-gradient(140deg, #eff6ff, #f0fdfa);
             color: var(--text);
         }
         .container {
-            max-width: 760px;
+            max-width: 920px;
             margin: 2rem auto;
             padding: 0 1rem;
         }
@@ -33,223 +32,342 @@
             border-radius: 12px;
             padding: 1rem;
             margin-bottom: 1rem;
-            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.05);
         }
-        h1, h2 { margin: 0 0 0.8rem 0; }
-        h1 { font-size: 1.5rem; }
-        h2 { font-size: 1.1rem; }
-        p { color: var(--muted); margin-top: 0; }
+        .hidden { display: none; }
         .row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.75rem;
             margin-bottom: 0.75rem;
         }
-        label {
-            display: block;
-            font-size: 0.9rem;
-            margin-bottom: 0.25rem;
+        @media (max-width: 700px) {
+            .row { grid-template-columns: 1fr; }
         }
-        input[type="email"],
-        input[type="password"],
-        input[type="text"],
-        input[type="file"] {
+        input[type="email"], input[type="password"] {
             width: 100%;
+            padding: 0.6rem 0.7rem;
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 0.6rem 0.7rem;
-            font-size: 0.95rem;
-            background: white;
         }
         button {
             border: none;
-            border-radius: 8px;
             background: var(--accent);
             color: white;
-            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            padding: 0.55rem 0.9rem;
             cursor: pointer;
             font-weight: 600;
         }
-        button:hover { background: var(--accent-2); }
+        button.secondary { background: #475569; }
+        button.danger { background: var(--danger); }
         .actions {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
+        .muted { color: var(--muted); }
         .status {
-            margin-top: 0.75rem;
-            padding: 0.75rem;
-            border-radius: 8px;
-            background: #f9fafb;
+            margin-top: 0.7rem;
             border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 0.7rem;
             font-family: Consolas, "Courier New", monospace;
             white-space: pre-wrap;
             word-break: break-word;
-            font-size: 0.85rem;
         }
-        .error {
-            color: var(--danger);
-            font-weight: 600;
+        .error { color: var(--danger); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.8rem;
         }
-        @media (max-width: 640px) {
-            .row { grid-template-columns: 1fr; }
+        th, td {
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            padding: 0.6rem 0.4rem;
+            vertical-align: top;
+            font-size: 0.92rem;
+        }
+        code {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 0.15rem 0.3rem;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>FileShare Test UI</h1>
-    <p>Use this page to register, login, then upload a file to S3.</p>
+    <h1>Cloud Drive</h1>
+    <p class="muted">Login, list your S3 files, and delete files from your own folder.</p>
 
     <div class="card">
-        <h2>1) Register / Login</h2>
+        <h2>1) Login</h2>
         <div class="row">
             <div>
                 <label for="email">Email</label>
-                <input id="email" type="email" placeholder="user@example.com" />
+                <input id="email" type="email" placeholder="user@example.com">
             </div>
             <div>
                 <label for="password">Password</label>
-                <input id="password" type="password" placeholder="Password" />
+                <input id="password" type="password" placeholder="Password">
             </div>
         </div>
         <div class="actions">
             <button id="registerBtn">Register</button>
             <button id="loginBtn">Login</button>
-            <button id="clearTokenBtn">Clear Token</button>
+            <button id="logoutBtn" class="secondary">Logout</button>
         </div>
-        <div class="status" id="authStatus">No token yet.</div>
+        <div id="authStatus" class="status">Not logged in.</div>
     </div>
 
     <div class="card">
-        <h2>2) Upload File</h2>
+        <h2>2) My S3 Files</h2>
+        <div class="actions">
+            <button id="refreshBtn">Refresh List</button>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Size (bytes)</th>
+                <th>Last Modified</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="filesTableBody">
+            <tr><td colspan="4" class="muted">No data yet.</td></tr>
+            </tbody>
+        </table>
+        <div id="fileStatus" class="status">Ready.</div>
+    </div>
+
+    <div class="card hidden" id="uploadCard">
+        <h2>3) Upload File</h2>
         <div class="row">
             <div>
-                <label for="fileInput">Choose file</label>
-                <input id="fileInput" type="file" />
-            </div>
-            <div>
-                <label for="tokenInput">Bearer Token</label>
-                <input id="tokenInput" type="text" placeholder="JWT token will appear here after login" />
+                <label for="fileInput">Choose File</label>
+                <input id="fileInput" type="file">
             </div>
         </div>
         <div class="actions">
-            <button id="uploadBtn">Upload to S3</button>
+            <button id="uploadBtn">Upload</button>
         </div>
-        <div class="status" id="uploadStatus">Waiting for upload.</div>
+        <div id="uploadStatus" class="status">No upload yet.</div>
     </div>
 </div>
 
 <script>
-    const authStatus = document.getElementById("authStatus");
-    const uploadStatus = document.getElementById("uploadStatus");
-    const tokenInput = document.getElementById("tokenInput");
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
-    const fileInput = document.getElementById("fileInput");
-
     const API = {
         register: "/api/auth/register",
         login: "/api/auth/login",
-        upload: "/api/files/upload"
+        listS3: "/api/files/s3",
+        upload: "/api/files/upload",
+        download: "/api/files/s3/download"
     };
 
-    function setStatus(el, data, isError = false) {
-        el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-        el.classList.toggle("error", isError);
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const authStatus = document.getElementById("authStatus");
+    const fileStatus = document.getElementById("fileStatus");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const filesTableBody = document.getElementById("filesTableBody");
+    const fileInput = document.getElementById("fileInput");
+    const uploadCard = document.getElementById("uploadCard");
+    let token = "";
+
+    function setStatus(element, data, isError = false) {
+        element.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        element.classList.toggle("error", isError);
     }
 
-    function credentials() {
-        return {
-            email: emailInput.value.trim(),
-            password: passwordInput.value
-        };
+    function authHeader() {
+        return token ? { Authorization: "Verify " + token } : {};
     }
 
-    async function register() {
-        const payload = credentials();
-        if (!payload.email || !payload.password) {
+    function renderRows(items) {
+        if (!items || items.length === 0) {
+            filesTableBody.innerHTML = '<tr><td colspan="4" class="muted">No files in your S3 folder.</td></tr>';
+            return;
+        }
+        filesTableBody.innerHTML = "";
+        for (const file of items) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><code>${file.fileName || file.key}</code></td>
+                <td>${file.sizeBytes}</td>
+                <td>${file.lastModified || ""}</td>
+                <td>
+                    <button class="secondary" data-action="download" data-key="${file.key}">Download</button>
+                    <button class="danger" data-action="delete" data-key="${file.key}">Delete</button>
+                </td>
+            `;
+            filesTableBody.appendChild(tr);
+        }
+    }
+
+    async function login() {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if (!email || !password) {
             setStatus(authStatus, "Email and password are required.", true);
             return;
         }
-        const res = await fetch(API.register, {
+        const response = await fetch(API.login, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ email, password })
         });
-        if (!res.ok) {
-            const text = await res.text();
-            setStatus(authStatus, "Register failed: " + text, true);
+        if (!response.ok) {
+            setStatus(authStatus, "Login failed: " + await response.text(), true);
+            return;
+        }
+        const data = await response.json();
+        token = data.token || "";
+        localStorage.setItem("fileshare_token", token);
+        setStatus(authStatus, "Login success.");
+        uploadCard.classList.remove("hidden");
+        await refreshFiles();
+    }
+
+    async function register() {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if (!email || !password) {
+            setStatus(authStatus, "Email and password are required.", true);
+            return;
+        }
+        const response = await fetch(API.register, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        if (!response.ok) {
+            setStatus(authStatus, "Register failed: " + await response.text(), true);
             return;
         }
         setStatus(authStatus, "Register success. Now click Login.");
     }
 
-    async function login() {
-        const payload = credentials();
-        if (!payload.email || !payload.password) {
-            setStatus(authStatus, "Email and password are required.", true);
+    async function refreshFiles() {
+        if (!token) {
+            setStatus(fileStatus, "Login first.", true);
             return;
         }
-        const res = await fetch(API.login, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+        const response = await fetch(API.listS3, {
+            method: "GET",
+            headers: authHeader()
         });
-        if (!res.ok) {
-            const text = await res.text();
-            setStatus(authStatus, "Login failed: " + text, true);
+        if (!response.ok) {
+            setStatus(fileStatus, "List failed: " + await response.text(), true);
             return;
         }
-        const data = await res.json();
-        const token = data.token || "";
-        tokenInput.value = token;
-        localStorage.setItem("fileshare_token", token);
-        setStatus(authStatus, { message: "Login success", token });
+        const files = await response.json();
+        renderRows(files);
+        setStatus(fileStatus, "Loaded " + files.length + " file(s).");
+    }
+
+    async function deleteFile(key) {
+        if (!token) {
+            setStatus(fileStatus, "Login first.", true);
+            return;
+        }
+        const response = await fetch(API.listS3 + "?key=" + encodeURIComponent(key), {
+            method: "DELETE",
+            headers: authHeader()
+        });
+        if (!response.ok) {
+            setStatus(fileStatus, "Delete failed: " + await response.text(), true);
+            return;
+        }
+        setStatus(fileStatus, "Deleted: " + key);
+        await refreshFiles();
+    }
+
+    async function downloadFile(key) {
+        if (!token) {
+            setStatus(fileStatus, "Login first.", true);
+            return;
+        }
+        const response = await fetch(API.download + "?key=" + encodeURIComponent(key), {
+            method: "GET",
+            headers: authHeader()
+        });
+        if (!response.ok) {
+            setStatus(fileStatus, "Download failed: " + await response.text(), true);
+            return;
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const fileName = key.split("/").pop() || "download.bin";
+        const anchor = document.createElement("a");
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+        setStatus(fileStatus, "Downloaded: " + key);
     }
 
     async function uploadFile() {
+        if (!token) {
+            setStatus(uploadStatus, "Login first.", true);
+            return;
+        }
         const file = fileInput.files[0];
-        const token = tokenInput.value.trim();
         if (!file) {
             setStatus(uploadStatus, "Choose a file first.", true);
             return;
         }
-        if (!token) {
-            setStatus(uploadStatus, "Token is required. Login first.", true);
-            return;
-        }
+
         const form = new FormData();
         form.append("file", file);
 
-        const res = await fetch(API.upload, {
+        const response = await fetch(API.upload, {
             method: "POST",
-            headers: { Authorization: "Bearer " + token },
+            headers: authHeader(),
             body: form
         });
-        if (!res.ok) {
-            const text = await res.text();
-            setStatus(uploadStatus, "Upload failed: " + text, true);
+        if (!response.ok) {
+            setStatus(uploadStatus, "Upload failed: " + await response.text(), true);
             return;
         }
-        const data = await res.json();
-        setStatus(uploadStatus, data);
+        const data = await response.json();
+        setStatus(uploadStatus, "Uploaded: " + (data.s3Key || file.name));
+        await refreshFiles();
     }
 
     document.getElementById("registerBtn").addEventListener("click", register);
     document.getElementById("loginBtn").addEventListener("click", login);
+    document.getElementById("refreshBtn").addEventListener("click", refreshFiles);
     document.getElementById("uploadBtn").addEventListener("click", uploadFile);
-    document.getElementById("clearTokenBtn").addEventListener("click", () => {
-        tokenInput.value = "";
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+        token = "";
         localStorage.removeItem("fileshare_token");
-        setStatus(authStatus, "Token cleared.");
+        renderRows([]);
+        uploadCard.classList.add("hidden");
+        setStatus(authStatus, "Logged out.");
+        setStatus(fileStatus, "Ready.");
     });
 
-    const savedToken = localStorage.getItem("fileshare_token");
-    if (savedToken) {
-        tokenInput.value = savedToken;
-        setStatus(authStatus, "Loaded token from localStorage.");
-    }
+    filesTableBody.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-key]");
+        if (!button) {
+            return;
+        }
+        const key = button.getAttribute("data-key");
+        const action = button.getAttribute("data-action");
+        if (action === "download") {
+            downloadFile(key);
+            return;
+        }
+        deleteFile(key);
+    });
+
+    setStatus(authStatus, "Not logged in.");
+    uploadCard.classList.add("hidden");
 </script>
 </body>
 </html>

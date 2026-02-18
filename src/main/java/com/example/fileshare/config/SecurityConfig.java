@@ -3,7 +3,6 @@ package com.example.fileshare.config;
 import com.example.fileshare.request.JwtHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,7 +30,6 @@ public class SecurityConfig {
                 )
                 .headers(h -> h.frameOptions(f -> f.disable())) // H2 console
                 .formLogin(form -> form.disable())
-                .httpBasic(Customizer.withDefaults())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
