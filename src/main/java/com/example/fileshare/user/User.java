@@ -1,4 +1,4 @@
-package user;
+package com.example.fileshare.user;
 import jakarta.persistence.*;
 
 import java.time.Instant;

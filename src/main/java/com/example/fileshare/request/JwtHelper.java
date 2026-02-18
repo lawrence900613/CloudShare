@@ -10,25 +10,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
-public class JwtUtil {
-
-
+public class JwtHelper {
+    // Used for hashed the info
     private final SecretKey key;
-    private final long ttlMillis;
+    // Limited valid time of hashed info
+    private final long validityInMilliseconds;
 
-    public JwtUtil(
+    public JwtHelper(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.ttlMinutes}") long ttlMinutes) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.ttlMillis = ttlMinutes * 60_000;
+        this.validityInMilliseconds = ttlMinutes * 60_000;
     }
 
     public String generateToken(String subject) {
-        long now = System.currentTimeMillis();
+        long current = System.currentTimeMillis();
         return Jwts.builder()
                 .setSubject(subject)
-                .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + ttlMillis))
+                .setIssuedAt(new Date(current))
+                .setExpiration(new Date(current + validityInMilliseconds))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }

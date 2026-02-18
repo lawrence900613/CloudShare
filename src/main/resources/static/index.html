@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FileShare Test UI</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --accent: #0f766e;
+            --accent-2: #115e59;
+            --danger: #b91c1c;
+            --border: #d1d5db;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc, #ecfeff);
+            color: var(--text);
+        }
+        .container {
+            max-width: 760px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 18px rgba(17, 24, 39, 0.05);
+        }
+        h1, h2 { margin: 0 0 0.8rem 0; }
+        h1 { font-size: 1.5rem; }
+        h2 { font-size: 1.1rem; }
+        p { color: var(--muted); margin-top: 0; }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.7rem;
+            font-size: 0.95rem;
+            background: white;
+        }
+        button {
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            padding: 0.6rem 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: var(--accent-2); }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .status {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            font-family: Consolas, "Courier New", monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.85rem;
+        }
+        .error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+        @media (max-width: 640px) {
+            .row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>FileShare Test UI</h1>
+    <p>Use this page to register, login, then upload a file to S3.</p>
+
+    <div class="card">
+        <h2>1) Register / Login</h2>
+        <div class="row">
+            <div>
+                <label for="email">Email</label>
+                <input id="email" type="email" placeholder="user@example.com" />
+            </div>
+            <div>
+                <label for="password">Password</label>
+                <input id="password" type="password" placeholder="Password" />
+            </div>
+        </div>
+        <div class="actions">
+            <button id="registerBtn">Register</button>
+            <button id="loginBtn">Login</button>
+            <button id="clearTokenBtn">Clear Token</button>
+        </div>
+        <div class="status" id="authStatus">No token yet.</div>
+    </div>
+
+    <div class="card">
+        <h2>2) Upload File</h2>
+        <div class="row">
+            <div>
+                <label for="fileInput">Choose file</label>
+                <input id="fileInput" type="file" />
+            </div>
+            <div>
+                <label for="tokenInput">Bearer Token</label>
+                <input id="tokenInput" type="text" placeholder="JWT token will appear here after login" />
+            </div>
+        </div>
+        <div class="actions">
+            <button id="uploadBtn">Upload to S3</button>
+        </div>
+        <div class="status" id="uploadStatus">Waiting for upload.</div>
+    </div>
+</div>
+
+<script>
+    const authStatus = document.getElementById("authStatus");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const tokenInput = document.getElementById("tokenInput");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const fileInput = document.getElementById("fileInput");
+
+    const API = {
+        register: "/api/auth/register",
+        login: "/api/auth/login",
+        upload: "/api/files/upload"
+    };
+
+    function setStatus(el, data, isError = false) {
+        el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        el.classList.toggle("error", isError);
+    }
+
+    function credentials() {
+        return {
+            email: emailInput.value.trim(),
+            password: passwordInput.value
+        };
+    }
+
+    async function register() {
+        const payload = credentials();
+        if (!payload.email || !payload.password) {
+            setStatus(authStatus, "Email and password are required.", true);
+            return;
+        }
+        const res = await fetch(API.register, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            setStatus(authStatus, "Register failed: " + text, true);
+            return;
+        }
+        setStatus(authStatus, "Register success. Now click Login.");
+    }
+
+    async function login() {
+        const payload = credentials();
+        if (!payload.email || !payload.password) {
+            setStatus(authStatus, "Email and password are required.", true);
+            return;
+        }
+        const res = await fetch(API.login, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            setStatus(authStatus, "Login failed: " + text, true);
+            return;
+        }
+        const data = await res.json();
+        const token = data.token || "";
+        tokenInput.value = token;
+        localStorage.setItem("fileshare_token", token);
+        setStatus(authStatus, { message: "Login success", token });
+    }
+
+    async function uploadFile() {
+        const file = fileInput.files[0];
+        const token = tokenInput.value.trim();
+        if (!file) {
+            setStatus(uploadStatus, "Choose a file first.", true);
+            return;
+        }
+        if (!token) {
+            setStatus(uploadStatus, "Token is required. Login first.", true);
+            return;
+        }
+        const form = new FormData();
+        form.append("file", file);
+
+        const res = await fetch(API.upload, {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+            body: form
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            setStatus(uploadStatus, "Upload failed: " + text, true);
+            return;
+        }
+        const data = await res.json();
+        setStatus(uploadStatus, data);
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", register);
+    document.getElementById("loginBtn").addEventListener("click", login);
+    document.getElementById("uploadBtn").addEventListener("click", uploadFile);
+    document.getElementById("clearTokenBtn").addEventListener("click", () => {
+        tokenInput.value = "";
+        localStorage.removeItem("fileshare_token");
+        setStatus(authStatus, "Token cleared.");
+    });
+
+    const savedToken = localStorage.getItem("fileshare_token");
+    if (savedToken) {
+        tokenInput.value = savedToken;
+        setStatus(authStatus, "Loaded token from localStorage.");
+    }
+</script>
+</body>
+</html>

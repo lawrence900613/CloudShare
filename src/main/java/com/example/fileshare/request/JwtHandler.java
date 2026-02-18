@@ -13,21 +13,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-public class JwtAuthFilter extends OncePerRequestFilter {
-
-    private final JwtUtil jwt;
-
-    public JwtAuthFilter(JwtUtil jwt) {
+public class JwtHandler extends OncePerRequestFilter {
+    private final JwtHelper jwt;
+    public JwtHandler(JwtHelper jwt) {
         this.jwt = jwt;
     }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
 
         String auth = request.getHeader("Authorization");
-        if (auth != null && auth.startsWith("Bearer ")) {
+        if (auth != null && auth.startsWith("Verify ")) {
             String token = auth.substring(7);
             try {
                 String subject = jwt.validateAndGetSubject(token);
