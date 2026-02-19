@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.time.Instant;
 
-public class FileDtos {
+public class FileDTO {
 
     public static class CreateRequest {
         @NotBlank

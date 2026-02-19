@@ -155,6 +155,28 @@
         </div>
         <div id="uploadStatus" class="status">No upload yet.</div>
     </div>
+
+    <div class="card hidden" id="shareCard">
+        <h2>4) Share Links</h2>
+        <div class="actions">
+            <button id="refreshSharesBtn">Refresh Share Links</button>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>File</th>
+                <th>Expires</th>
+                <th>Downloads</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="shareTableBody">
+            <tr><td colspan="5" class="muted">No share links yet.</td></tr>
+            </tbody>
+        </table>
+        <div id="shareStatus" class="status">Ready.</div>
+    </div>
 </div>
 
 <script>
@@ -163,7 +185,8 @@
         login: "/api/auth/login",
         listS3: "/api/files/s3",
         upload: "/api/files/upload",
-        download: "/api/files/s3/download"
+        download: "/api/files/s3/download",
+        shares: "/api/shares"
     };
 
     const emailInput = document.getElementById("email");
@@ -171,9 +194,12 @@
     const authStatus = document.getElementById("authStatus");
     const fileStatus = document.getElementById("fileStatus");
     const uploadStatus = document.getElementById("uploadStatus");
+    const shareStatus = document.getElementById("shareStatus");
     const filesTableBody = document.getElementById("filesTableBody");
+    const shareTableBody = document.getElementById("shareTableBody");
     const fileInput = document.getElementById("fileInput");
     const uploadCard = document.getElementById("uploadCard");
+    const shareCard = document.getElementById("shareCard");
     let token = "";
 
     function setStatus(element, data, isError = false) {
@@ -198,11 +224,34 @@
                 <td>${file.sizeBytes}</td>
                 <td>${file.lastModified || ""}</td>
                 <td>
+                    <button data-action="share" data-key="${file.key}">Share</button>
                     <button class="secondary" data-action="download" data-key="${file.key}">Download</button>
                     <button class="danger" data-action="delete" data-key="${file.key}">Delete</button>
                 </td>
             `;
             filesTableBody.appendChild(tr);
+        }
+    }
+
+    function renderShareRows(items) {
+        if (!items || items.length === 0) {
+            shareTableBody.innerHTML = '<tr><td colspan="5" class="muted">No share links yet.</td></tr>';
+            return;
+        }
+        shareTableBody.innerHTML = "";
+        for (const share of items) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><code>${share.key ? share.key.split("/").pop() : ""}</code></td>
+                <td>${share.expiresAt || "No expiry"}</td>
+                <td>${share.downloadCount}</td>
+                <td>${share.revoked ? "Revoked" : "Active"}</td>
+                <td>
+                    <button class="secondary" data-share-action="copy" data-url="${share.publicDownloadUrl}">Copy Link</button>
+                    <button class="danger" data-share-action="revoke" data-id="${share.id}">Revoke</button>
+                </td>
+            `;
+            shareTableBody.appendChild(tr);
         }
     }
 
@@ -227,7 +276,9 @@
         localStorage.setItem("fileshare_token", token);
         setStatus(authStatus, "Login success.");
         uploadCard.classList.remove("hidden");
+        shareCard.classList.remove("hidden");
         await refreshFiles();
+        await refreshShares();
     }
 
     async function register() {
@@ -311,6 +362,25 @@
         setStatus(fileStatus, "Downloaded: " + key);
     }
 
+    async function createShareLink(key) {
+        if (!token) {
+            setStatus(fileStatus, "Login first.", true);
+            return;
+        }
+        const response = await fetch(API.shares, {
+            method: "POST",
+            headers: { ...authHeader(), "Content-Type": "application/json" },
+            body: JSON.stringify({ key: key, expiresInMinutes: 1440 })
+        });
+        if (!response.ok) {
+            setStatus(fileStatus, "Share failed: " + await response.text(), true);
+            return;
+        }
+        const share = await response.json();
+        setStatus(fileStatus, "Share link:\n" + share.publicDownloadUrl);
+        await refreshShares();
+    }
+
     async function uploadFile() {
         if (!token) {
             setStatus(uploadStatus, "Login first.", true);
@@ -339,17 +409,65 @@
         await refreshFiles();
     }
 
+    async function refreshShares() {
+        if (!token) {
+            setStatus(shareStatus, "Login first.", true);
+            return;
+        }
+        const response = await fetch(API.shares, {
+            method: "GET",
+            headers: authHeader()
+        });
+        if (!response.ok) {
+            setStatus(shareStatus, "Load shares failed: " + await response.text(), true);
+            return;
+        }
+        const shares = await response.json();
+        renderShareRows(shares);
+        setStatus(shareStatus, "Loaded " + shares.length + " share link(s).");
+    }
+
+    async function revokeShare(id) {
+        if (!token) {
+            setStatus(shareStatus, "Login first.", true);
+            return;
+        }
+        const response = await fetch(API.shares + "/" + id, {
+            method: "DELETE",
+            headers: authHeader()
+        });
+        if (!response.ok) {
+            setStatus(shareStatus, "Revoke failed: " + await response.text(), true);
+            return;
+        }
+        setStatus(shareStatus, "Share link revoked.");
+        await refreshShares();
+    }
+
+    async function copyShareLink(url) {
+        try {
+            await navigator.clipboard.writeText(url);
+            setStatus(shareStatus, "Copied link:\n" + url);
+        } catch (e) {
+            setStatus(shareStatus, "Copy failed. Link:\n" + url, true);
+        }
+    }
+
     document.getElementById("registerBtn").addEventListener("click", register);
     document.getElementById("loginBtn").addEventListener("click", login);
     document.getElementById("refreshBtn").addEventListener("click", refreshFiles);
+    document.getElementById("refreshSharesBtn").addEventListener("click", refreshShares);
     document.getElementById("uploadBtn").addEventListener("click", uploadFile);
     document.getElementById("logoutBtn").addEventListener("click", () => {
         token = "";
         localStorage.removeItem("fileshare_token");
         renderRows([]);
+        renderShareRows([]);
         uploadCard.classList.add("hidden");
+        shareCard.classList.add("hidden");
         setStatus(authStatus, "Logged out.");
         setStatus(fileStatus, "Ready.");
+        setStatus(shareStatus, "Ready.");
     });
 
     filesTableBody.addEventListener("click", (event) => {
@@ -363,11 +481,31 @@
             downloadFile(key);
             return;
         }
+        if (action === "share") {
+            createShareLink(key);
+            return;
+        }
         deleteFile(key);
+    });
+
+    shareTableBody.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-share-action]");
+        if (!button) {
+            return;
+        }
+        const action = button.getAttribute("data-share-action");
+        if (action === "copy") {
+            copyShareLink(button.getAttribute("data-url"));
+            return;
+        }
+        if (action === "revoke") {
+            revokeShare(button.getAttribute("data-id"));
+        }
     });
 
     setStatus(authStatus, "Not logged in.");
     uploadCard.classList.add("hidden");
+    shareCard.classList.add("hidden");
 </script>
 </body>
 </html>

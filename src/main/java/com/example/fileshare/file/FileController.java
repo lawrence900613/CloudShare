@@ -1,6 +1,6 @@
 package com.example.fileshare.file;
 
-import com.example.fileshare.dto.FileDtos;
+import com.example.fileshare.dto.FileDTO;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,43 +31,43 @@ public class FileController {
     }
 
     @PostMapping
-    public FileDtos.FileResponse create(
+    public FileDTO.FileResponse create(
             Authentication authentication,
-            @Validated @RequestBody FileDtos.CreateRequest request
+            @Validated @RequestBody FileDTO.CreateRequest request
     ) {
         FileObject saved = fileService.create(authentication.getName(), request);
-        return new FileDtos.FileResponse(saved, fileService.getBucketName());
+        return new FileDTO.FileResponse(saved, fileService.getBucketName());
     }
 
     @GetMapping
-    public List<FileDtos.FileResponse> list(
+    public List<FileDTO.FileResponse> list(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return fileService.list(authentication.getName(), page, size)
                 .stream()
-                .map(file -> new FileDtos.FileResponse(file, fileService.getBucketName()))
+                .map(file -> new FileDTO.FileResponse(file, fileService.getBucketName()))
                 .toList();
     }
 
     @GetMapping("/{id}")
-    public FileDtos.FileResponse get(
+    public FileDTO.FileResponse get(
             Authentication authentication,
             @PathVariable Long id
     ) {
         FileObject file = fileService.getOne(authentication.getName(), id);
-        return new FileDtos.FileResponse(file, fileService.getBucketName());
+        return new FileDTO.FileResponse(file, fileService.getBucketName());
     }
 
     @PatchMapping("/{id}")
-    public FileDtos.FileResponse rename(
+    public FileDTO.FileResponse rename(
             Authentication authentication,
             @PathVariable Long id,
-            @Validated @RequestBody FileDtos.UpdateRequest request
+            @Validated @RequestBody FileDTO.UpdateRequest request
     ) {
         FileObject file = fileService.updateName(authentication.getName(), id, request);
-        return new FileDtos.FileResponse(file, fileService.getBucketName());
+        return new FileDTO.FileResponse(file, fileService.getBucketName());
     }
 
     @DeleteMapping("/{id}")
@@ -79,7 +79,7 @@ public class FileController {
     }
 
     @GetMapping("/s3")
-    public List<FileDtos.S3ObjectResponse> listS3(Authentication authentication) {
+    public List<FileDTO.S3ObjectResponse> listS3(Authentication authentication) {
         return fileService.listS3Files(authentication.getName());
     }
 
@@ -108,12 +108,12 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public FileDtos.FileResponse upload(
+    public FileDTO.FileResponse upload(
             @RequestPart("file") MultipartFile file,
             Authentication authentication
     ) {
         String owner = authentication != null ? authentication.getName() : "anonymous";
         FileObject saved = fileService.upload(file, owner);
-        return new FileDtos.FileResponse(saved, fileService.getBucketName());
+        return new FileDTO.FileResponse(saved, fileService.getBucketName());
     }
 }

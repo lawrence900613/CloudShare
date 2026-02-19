@@ -16,6 +16,12 @@ public class User {
     @Column(nullable = false, length = 100)
     private String passwordHashed;
 
+    @Column(nullable = false)
+    private boolean emailVerified = true;
+
+    @Column(nullable = false)
+    private Instant createdAt = Instant.now();
+
     // getters/setters
     public Long getId() {
         return id;
@@ -39,5 +45,21 @@ public class User {
 
     public void setPasswordHashed(String passwordHashed) {
         this.passwordHashed = passwordHashed;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

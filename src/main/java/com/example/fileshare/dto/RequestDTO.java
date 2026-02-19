@@ -15,4 +15,22 @@ public class RequestDTO {
         public String token;
         public TokenDTO(String token) { this.token = token; }
     }
+
+    public static class RegisterResponseDTO {
+        public String message;
+        public boolean verificationEmailSent;
+
+        public RegisterResponseDTO(String message, boolean verificationEmailSent) {
+            this.message = message;
+            this.verificationEmailSent = verificationEmailSent;
+        }
+    }
+
+    public static class MessageDTO {
+        public String message;
+
+        public MessageDTO(String message) {
+            this.message = message;
+        }
+    }
 }

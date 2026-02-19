@@ -1,7 +1,8 @@
 package com.example.fileshare.file;
 
-import com.example.fileshare.dto.FileDtos;
+import com.example.fileshare.dto.FileDTO;
 import com.example.fileshare.repository.UserRepository;
+import com.example.fileshare.share.ShareLinkRepository;
 import com.example.fileshare.user.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +31,7 @@ public class FileService {
 
     private final FileObjectRepository files;
     private final UserRepository users;
+    private final ShareLinkRepository shareLinks;
     private final S3Client s3Client;
     private final String bucketName;
     private final int maxFilesPerUser;
@@ -37,12 +39,14 @@ public class FileService {
     public FileService(
             FileObjectRepository files,
             UserRepository users,
+            ShareLinkRepository shareLinks,
             S3Client s3Client,
             @Value("${app.aws.s3.bucket}") String bucketName,
             @Value("${app.files.max-per-user:5}") int maxFilesPerUser
     ) {
         this.files = files;
         this.users = users;
+        this.shareLinks = shareLinks;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.maxFilesPerUser = maxFilesPerUser;
@@ -54,7 +58,7 @@ public class FileService {
     }
 
     @Transactional
-    public FileObject create(String ownerEmail, FileDtos.CreateRequest req) {
+    public FileObject create(String ownerEmail, FileDTO.CreateRequest req) {
         Long ownerId = requireUserIdByEmail(ownerEmail);
         enforceUserFileLimit(ownerId);
         String ownerFolder = normalizeOwner(ownerEmail);
@@ -77,7 +81,7 @@ public class FileService {
     }
 
     @Transactional
-    public FileObject updateName(String ownerEmail, Long id, FileDtos.UpdateRequest req) {
+    public FileObject updateName(String ownerEmail, Long id, FileDTO.UpdateRequest req) {
         FileObject file = getOne(ownerEmail, id);
         file.setOriginalName(req.originalName);
         return files.save(file);
@@ -86,6 +90,7 @@ public class FileService {
     @Transactional
     public void delete(String ownerEmail, Long id) {
         FileObject file = getOne(ownerEmail, id);
+        removeShareLinks(file.getOwnerId(), file.getS3Key());
         try {
             s3Client.deleteObject(DeleteObjectRequest.builder()
                     .bucket(bucketName)
@@ -97,7 +102,7 @@ public class FileService {
         files.delete(file);
     }
 
-    public List<FileDtos.S3ObjectResponse> listS3Files(String ownerEmail) {
+    public List<FileDTO.S3ObjectResponse> listS3Files(String ownerEmail) {
         String prefix = userPrefix(ownerEmail);
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
@@ -125,6 +130,7 @@ public class FileService {
                 .key(key)
                 .build());
 
+        removeShareLinks(ownerId, key);
         files.findByOwnerIdAndS3Key(ownerId, key).ifPresent(files::delete);
     }
 
@@ -212,13 +218,17 @@ public class FileService {
         }
     }
 
-    private FileDtos.S3ObjectResponse mapS3Object(S3Object object) {
-        return new FileDtos.S3ObjectResponse(
+    private FileDTO.S3ObjectResponse mapS3Object(S3Object object) {
+        return new FileDTO.S3ObjectResponse(
                 object.key(),
                 object.size(),
                 object.lastModified(),
                 bucketName
         );
+    }
+
+    private void removeShareLinks(Long ownerId, String key) {
+        shareLinks.deleteAllByOwnerIdAndS3Key(ownerId, key);
     }
 
     public record DownloadPayload(byte[] bytes, String fileName, String contentType) {}
