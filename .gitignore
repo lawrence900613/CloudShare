@@ -43,3 +43,7 @@ data/
 
 ### local env info
 !**/src/main/resource/application.properties
+
+### local secrets (do not commit)
+application-secrets.properties
+src/main/resources/application-local.properties

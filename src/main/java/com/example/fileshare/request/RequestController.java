@@ -1,5 +1,6 @@
 package com.example.fileshare.request;
 import com.example.fileshare.dto.RequestDTO.*;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,16 +15,13 @@ public class RequestController {
     }
 
     @PostMapping("/register")
-    public RegisterResponseDTO register(@RequestBody RegisterDTO req) {
-        boolean sent = service.register(req.email, req.password);
-        if (sent) {
-            return new RegisterResponseDTO("Registration successful. Verification email sent.", true);
-        }
-        return new RegisterResponseDTO("Registration successful. Email sending disabled; check backend logs for verification URL.", false);
+    public RegisterResponseDTO register(@Valid @RequestBody RegisterDTO req) {
+        service.register(req.email, req.password);
+        return new RegisterResponseDTO("Registration successful.", false);
     }
 
     @PostMapping("/login")
-    public TokenDTO login(@RequestBody LoginDTO req) {
+    public TokenDTO login(@Valid @RequestBody LoginDTO req) {
         String token = service.login(req.email, req.password);
         return new TokenDTO(token);
     }
@@ -31,15 +29,12 @@ public class RequestController {
     @GetMapping("/verify")
     public MessageDTO verify(@RequestParam String token) {
         service.verifyEmail(token);
-        return new MessageDTO("Email verified successfully. You can now login.");
+        return new MessageDTO("Email verification is currently disabled.");
     }
 
     @PostMapping("/resend-verification")
-    public RegisterResponseDTO resendVerification(@RequestBody RegisterDTO req) {
-        boolean sent = service.resendVerification(req.email);
-        if (sent) {
-            return new RegisterResponseDTO("Verification email sent.", true);
-        }
-        return new RegisterResponseDTO("Email sending disabled; check backend logs for verification URL.", false);
+    public RegisterResponseDTO resendVerification(@Valid @RequestBody ResendVerificationDTO req) {
+        service.resendVerification(req.email);
+        return new RegisterResponseDTO("Email verification is currently disabled.", false);
     }
 }
