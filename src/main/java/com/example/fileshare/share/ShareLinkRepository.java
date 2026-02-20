@@ -9,5 +9,6 @@ public interface ShareLinkRepository extends JpaRepository<ShareLink, Long> {
     Optional<ShareLink> findByToken(String token);
     Optional<ShareLink> findByIdAndOwnerId(Long id, Long ownerId);
     List<ShareLink> findAllByOwnerIdOrderByCreatedAtDesc(Long ownerId);
+    List<ShareLink> findAllByOwnerIdAndS3Key(Long ownerId, String s3Key);
     void deleteAllByOwnerIdAndS3Key(Long ownerId, String s3Key);
 }

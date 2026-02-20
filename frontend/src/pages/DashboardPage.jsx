@@ -115,6 +115,20 @@ function DashboardPage() {
     }
   };
 
+  const renameFile = async (id, nextName) => {
+    if (!token) {
+      showNotice("error", "Please login first.");
+      return;
+    }
+    try {
+      await apiClient.renameFile(token, id, nextName);
+      showNotice("success", "File renamed.");
+      await Promise.all([refreshFiles(), refreshShares()]);
+    } catch (error) {
+      showNotice("error", error.message);
+    }
+  };
+
   const createShare = async (key) => {
     if (!token) {
       showNotice("error", "Please login first.");
@@ -180,6 +194,7 @@ function DashboardPage() {
             files={files}
             onRefresh={refreshFiles}
             onDelete={deleteFile}
+            onRename={renameFile}
             onCreateShare={createShare}
             onStatus={showNotice}
           />

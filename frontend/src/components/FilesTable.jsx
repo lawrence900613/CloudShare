@@ -55,7 +55,23 @@ function isTextPreview(contentType, fileName) {
   );
 }
 
-function FilesTable({ sessionActive, token, files, onRefresh, onDelete, onCreateShare, onStatus }) {
+function resolveKey(file) {
+  return file?.s3Key || file?.key || "";
+}
+
+function resolveName(file) {
+  return file?.originalName || file?.fileName || resolveKey(file);
+}
+
+function resolveSize(file) {
+  return file?.sizeBytes || 0;
+}
+
+function resolveDate(file) {
+  return file?.createdAt || file?.lastModified || "";
+}
+
+function FilesTable({ sessionActive, token, files, onRefresh, onDelete, onRename, onCreateShare, onStatus }) {
   const displayFiles = sessionActive ? files : [];
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -136,24 +152,46 @@ function FilesTable({ sessionActive, token, files, onRefresh, onDelete, onCreate
                   </td>
                 </tr>
               ) : (
-                displayFiles.map((file) => (
-                  <tr key={file.key}>
-                    <td>{file.fileName || file.key}</td>
-                    <td>{formatBytes(file.sizeBytes)}</td>
-                    <td>{formatDate(file.lastModified)}</td>
+                displayFiles.map((file) => {
+                  const key = resolveKey(file);
+                  const name = resolveName(file);
+                  const size = resolveSize(file);
+                  const date = resolveDate(file);
+
+                  return (
+                  <tr key={key}>
+                    <td>{name}</td>
+                    <td>{formatBytes(size)}</td>
+                    <td>{formatDate(date)}</td>
                     <td className="rowActions">
-                      <button onClick={() => openPreview(file.key)} disabled={!sessionActive}>
+                      <button onClick={() => openPreview(key)} disabled={!sessionActive}>
                         Preview
                       </button>
-                      <button onClick={() => onCreateShare(file.key)} disabled={!sessionActive}>
+                      <button onClick={() => onCreateShare(key)} disabled={!sessionActive}>
                         Share
+                      </button>
+                      <button
+                        disabled={!sessionActive || !file.id}
+                        onClick={async () => {
+                          const nextName = window.prompt("Enter new file name", name);
+                          if (!nextName) return;
+                          const trimmed = nextName.trim();
+                          if (!trimmed) return;
+                          try {
+                            await onRename(file.id, trimmed);
+                          } catch {
+                            // Parent already shows error status.
+                          }
+                        }}
+                      >
+                        Rename
                       </button>
                       <button
                         className="ghost"
                         disabled={!sessionActive}
                         onClick={async () => {
                           try {
-                            await downloadS3File(token, file.key);
+                            await downloadS3File(token, key);
                             onStatus("success", "Download completed.");
                           } catch (error) {
                             onStatus("error", error.message);
@@ -162,12 +200,13 @@ function FilesTable({ sessionActive, token, files, onRefresh, onDelete, onCreate
                       >
                         Download
                       </button>
-                      <button className="danger" onClick={() => onDelete(file.key)} disabled={!sessionActive}>
+                      <button className="danger" onClick={() => onDelete(key)} disabled={!sessionActive}>
                         Delete
                       </button>
                     </td>
                   </tr>
-                ))
+                );
+                })
               )}
             </tbody>
           </table>

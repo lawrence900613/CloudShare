@@ -53,18 +53,49 @@ export const apiClient = {
   },
 
   listFiles(token) {
-    return request("/api/files/s3", {
+    return request("/api/files?page=0&size=200", {
       headers: { Authorization: `Verify ${token}` }
     });
   },
 
   uploadFile(token, file) {
-    const body = new FormData();
-    body.append("file", file);
-    return request("/api/files/upload", {
+    const mimeType = file.type || "application/octet-stream";
+
+    return request("/api/files/upload/presigned", {
       method: "POST",
-      headers: { Authorization: `Verify ${token}` },
-      body
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Verify ${token}`
+      },
+      body: JSON.stringify({
+        originalName: file.name,
+        mimeType,
+        sizeBytes: file.size
+      })
+    }).then(async (presigned) => {
+      const uploadResponse = await fetch(presigned.uploadUrl, {
+        method: presigned.method || "PUT",
+        headers: { "Content-Type": mimeType },
+        body: file
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Direct upload to S3 failed");
+      }
+
+      return request("/api/files/upload/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Verify ${token}`
+        },
+        body: JSON.stringify({
+          s3Key: presigned.s3Key,
+          originalName: file.name,
+          mimeType,
+          sizeBytes: file.size
+        })
+      });
     });
   },
 
@@ -72,6 +103,17 @@ export const apiClient = {
     return request(`/api/files/s3?key=${encodeURIComponent(key)}`, {
       method: "DELETE",
       headers: { Authorization: `Verify ${token}` }
+    });
+  },
+
+  renameFile(token, id, originalName) {
+    return request(`/api/files/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Verify ${token}`
+      },
+      body: JSON.stringify({ originalName })
     });
   },
 

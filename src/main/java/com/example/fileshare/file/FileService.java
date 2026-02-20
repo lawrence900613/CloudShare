@@ -14,14 +14,22 @@ import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -33,8 +41,10 @@ public class FileService {
     private final UserRepository users;
     private final ShareLinkRepository shareLinks;
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final String bucketName;
     private final int maxFilesPerUser;
+    private final long presignPutTtlMinutes;
 
     /**
      * Wires repository and S3 dependencies and loads file-related configuration.
@@ -45,15 +55,19 @@ public class FileService {
             UserRepository users,
             ShareLinkRepository shareLinks,
             S3Client s3Client,
+            S3Presigner s3Presigner,
             @Value("${app.aws.s3.bucket}") String bucketName,
-            @Value("${app.files.max-per-user:5}") int maxFilesPerUser
+            @Value("${app.files.max-per-user:5}") int maxFilesPerUser,
+            @Value("${app.aws.s3.presign-put-ttl-minutes:10}") long presignPutTtlMinutes
     ) {
         this.files = files;
         this.users = users;
         this.shareLinks = shareLinks;
         this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
         this.bucketName = bucketName;
         this.maxFilesPerUser = maxFilesPerUser;
+        this.presignPutTtlMinutes = presignPutTtlMinutes;
     }
 
     /**
@@ -87,6 +101,84 @@ public class FileService {
     }
 
     /**
+     * Generates a short-lived presigned PUT URL so the client uploads directly to S3.
+     * The returned key is owner-scoped and must be used in the completion request.
+     */
+    public FileDTO.DirectUploadUrlResponse createDirectUploadUrl(String ownerEmail, FileDTO.DirectUploadRequest req) {
+        Long ownerId = requireUserIdByEmail(ownerEmail);
+        enforceUserFileLimit(ownerId);
+
+        String ownerFolder = normalizeOwner(ownerEmail);
+        String cleanName = req.originalName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String key = ownerFolder + "/" + UUID.randomUUID() + "/" + cleanName;
+        String contentType = (req.mimeType == null || req.mimeType.isBlank())
+                ? "application/octet-stream"
+                : req.mimeType;
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(contentType)
+                .build();
+
+        PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(
+                PutObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(presignPutTtlMinutes))
+                        .putObjectRequest(putObjectRequest)
+                        .build()
+        );
+
+        return new FileDTO.DirectUploadUrlResponse(
+                key,
+                presigned.url().toString(),
+                "PUT",
+                presignPutTtlMinutes * 60
+        );
+    }
+
+    /**
+     * Finalizes a direct upload by verifying the S3 object exists and saving metadata.
+     * This keeps DB rows consistent with objects the user actually uploaded.
+     */
+    @Transactional
+    public FileObject completeDirectUpload(String ownerEmail, FileDTO.DirectUploadCompleteRequest req) {
+        Long ownerId = requireUserIdByEmail(ownerEmail);
+        enforceUserFileLimit(ownerId);
+
+        String prefix = userPrefix(ownerEmail);
+        if (req.s3Key == null || req.s3Key.isBlank() || !req.s3Key.startsWith(prefix)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only register your own uploaded files");
+        }
+
+        if (files.findByOwnerIdAndS3Key(ownerId, req.s3Key).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "File metadata already exists for this S3 key");
+        }
+
+        HeadObjectResponse existingObject;
+        try {
+            existingObject = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(req.s3Key)
+                    .build());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uploaded object not found in S3", e);
+        }
+
+        String resolvedMimeType = (req.mimeType == null || req.mimeType.isBlank())
+                ? existingObject.contentType()
+                : req.mimeType;
+        long resolvedSizeBytes = existingObject.contentLength() == null ? req.sizeBytes : existingObject.contentLength();
+
+        FileObject object = new FileObject();
+        object.setOwnerId(ownerId);
+        object.setS3Key(req.s3Key);
+        object.setOriginalName(req.originalName);
+        object.setMimeType(resolvedMimeType);
+        object.setSizeBytes(resolvedSizeBytes);
+        return files.save(object);
+    }
+
+    /**
      * Returns one file owned by the given user email and id.
      * Throws NOT_FOUND if the record is missing or belongs to another user.
      */
@@ -97,12 +189,44 @@ public class FileService {
     }
 
     /**
-     * Updates only the original display name of a user-owned file.
-     * Returns the saved entity after persisting the name change.
+     * Renames a user-owned file by copying the S3 object to a new key and deleting the old key.
+     * Related metadata and share links are updated to point to the new key.
      */
     @Transactional
     public FileObject updateName(String ownerEmail, Long id, FileDTO.UpdateRequest req) {
         FileObject file = getOne(ownerEmail, id);
+        String oldKey = file.getS3Key();
+        int lastSlash = oldKey.lastIndexOf('/');
+        String keyPrefix = lastSlash >= 0 ? oldKey.substring(0, lastSlash + 1) : "";
+        String cleanName = req.originalName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String newKey = keyPrefix + cleanName;
+
+        if (!newKey.equals(oldKey)) {
+            if (files.findByOwnerIdAndS3Key(file.getOwnerId(), newKey).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "A file with this name already exists");
+            }
+
+            try {
+                s3Client.copyObject(CopyObjectRequest.builder()
+                        .sourceBucket(bucketName)
+                        .sourceKey(oldKey)
+                        .destinationBucket(bucketName)
+                        .destinationKey(newKey)
+                        .metadataDirective("COPY")
+                        .build());
+
+                s3Client.deleteObject(DeleteObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(oldKey)
+                        .build());
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Rename in S3 failed", e);
+            }
+
+            rekeyShareLinks(file.getOwnerId(), oldKey, newKey);
+            file.setS3Key(newKey);
+        }
+
         file.setOriginalName(req.originalName);
         return files.save(file);
     }
@@ -297,6 +421,20 @@ public class FileService {
      */
     private void removeShareLinks(Long ownerId, String key) {
         shareLinks.deleteAllByOwnerIdAndS3Key(ownerId, key);
+    }
+
+    private void rekeyShareLinks(Long ownerId, String oldKey, String newKey) {
+        List<com.example.fileshare.share.ShareLink> links = shareLinks.findAllByOwnerIdAndS3Key(ownerId, oldKey);
+        if (links.isEmpty()) {
+            return;
+        }
+
+        List<com.example.fileshare.share.ShareLink> updated = new ArrayList<>(links.size());
+        for (com.example.fileshare.share.ShareLink link : links) {
+            link.setS3Key(newKey);
+            updated.add(link);
+        }
+        shareLinks.saveAll(updated);
     }
 
     public record DownloadPayload(byte[] bytes, String fileName, String contentType) {}

@@ -48,6 +48,31 @@ public class FileController {
     }
 
     /**
+     * Generates a presigned URL for direct client-to-S3 upload.
+     * The client uploads with the returned key and then calls the completion endpoint.
+     */
+    @PostMapping("/upload/presigned")
+    public FileDTO.DirectUploadUrlResponse createPresignedUploadUrl(
+            Authentication authentication,
+            @Validated @RequestBody FileDTO.DirectUploadRequest request
+    ) {
+        return fileService.createDirectUploadUrl(authentication.getName(), request);
+    }
+
+    /**
+     * Completes a direct upload by persisting metadata for a verified S3 object.
+     * Returns the saved file metadata in the standard API response format.
+     */
+    @PostMapping("/upload/complete")
+    public FileDTO.FileResponse completePresignedUpload(
+            Authentication authentication,
+            @Validated @RequestBody FileDTO.DirectUploadCompleteRequest request
+    ) {
+        FileObject saved = fileService.completeDirectUpload(authentication.getName(), request);
+        return new FileDTO.FileResponse(saved, fileService.getBucketName());
+    }
+
+    /**
      * Returns a paginated list of file records owned by the authenticated user.
      * Each item is mapped to the API response DTO including the bucket context.
      */
@@ -147,6 +172,7 @@ public class FileController {
      * Uploads a multipart file to S3 for the current authenticated user.
      * Returns the persisted file record metadata after a successful upload.
      */
+    @Deprecated(forRemoval = false)
     @PostMapping("/upload")
     public FileDTO.FileResponse upload(
             @RequestPart("file") MultipartFile file,

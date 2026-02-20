@@ -14,16 +14,32 @@ The repo includes local development setup for both backend and frontend.
 - User registration and login
 - Email verification flow
 - Upload, list, download, and delete files
+- Direct browser-to-S3 uploads using presigned URLs
+- Real cloud rename (S3 copy + delete) with metadata/share-link rekey
 - File previews in the UI (image, PDF, text-like files)
 - Create and revoke share links
 
 ## Feature breakdown
 
 ### 1. File upload, download, and preview
-- Files are uploaded to S3 through authenticated API endpoints.
+- Files are uploaded directly from browser to S3 using presigned PUT URLs.
+- Backend finalizes uploads by validating object ownership and saving metadata.
 - Users can list only their own files and view basic metadata.
 - Preview is supported in the dashboard for image, PDF, and text-like files.
 - Download and delete actions are permission-scoped to file ownership.
+
+### 1.1 Direct upload flow (presigned URL)
+1. `POST /api/files/upload/presigned` returns `{ s3Key, uploadUrl, method }`.
+2. Frontend uploads bytes directly to S3 using the returned URL.
+3. `POST /api/files/upload/complete` persists metadata after S3 object verification.
+
+Deprecated endpoint:
+- `POST /api/files/upload` remains available but is deprecated.
+
+### 1.2 Real cloud rename
+- `PATCH /api/files/{id}` performs S3 rename via copy + delete.
+- File metadata (`s3Key`, `originalName`) is updated after successful S3 operation.
+- Share links pointing to the old key are rekeyed to the new key.
 
 ### 2. Share links
 - Users can create share links from existing uploaded files.
@@ -68,6 +84,22 @@ VITE_API_BASE_URL=http://localhost:8080
 Default URLs:
 - Backend: `http://localhost:8080`
 - Frontend: `http://localhost:5173`
+
+## S3 CORS requirement for direct upload
+Because uploads are sent from browser directly to S3, bucket CORS must allow your frontend origin and `PUT`.
+
+Example:
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedOrigins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
 
 ## Project structure
 
