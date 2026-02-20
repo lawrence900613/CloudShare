@@ -36,6 +36,10 @@ public class FileService {
     private final String bucketName;
     private final int maxFilesPerUser;
 
+    /**
+     * Wires repository and S3 dependencies and loads file-related configuration.
+     * These values drive storage operations and per-user limits.
+     */
     public FileService(
             FileObjectRepository files,
             UserRepository users,
@@ -52,11 +56,19 @@ public class FileService {
         this.maxFilesPerUser = maxFilesPerUser;
     }
 
+    /**
+     * Returns a paginated list of file metadata for the given user email.
+     * Results are ordered from newest to oldest by creation time.
+     */
     public List<FileObject> list(String email, int page, int size) {
         Long ownerId = requireUserIdByEmail(email);
         return files.findAllByOwnerIdOrderByCreatedAtDesc(ownerId, PageRequest.of(page, size));
     }
 
+    /**
+     * Creates a metadata record with a generated owner-scoped S3 key.
+     * This does not upload bytes and is used for metadata-only creation flows.
+     */
     @Transactional
     public FileObject create(String ownerEmail, FileDTO.CreateRequest req) {
         Long ownerId = requireUserIdByEmail(ownerEmail);
@@ -74,12 +86,20 @@ public class FileService {
         return files.save(object);
     }
 
+    /**
+     * Returns one file owned by the given user email and id.
+     * Throws NOT_FOUND if the record is missing or belongs to another user.
+     */
     public FileObject getOne(String ownerEmail, Long id) {
         Long ownerId = requireUserIdByEmail(ownerEmail);
         return files.findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
     }
 
+    /**
+     * Updates only the original display name of a user-owned file.
+     * Returns the saved entity after persisting the name change.
+     */
     @Transactional
     public FileObject updateName(String ownerEmail, Long id, FileDTO.UpdateRequest req) {
         FileObject file = getOne(ownerEmail, id);
@@ -87,6 +107,10 @@ public class FileService {
         return files.save(file);
     }
 
+    /**
+     * Deletes a user-owned file from S3 and then removes database metadata.
+     * The S3 delete is kept idempotent so missing objects do not fail the request.
+     */
     @Transactional
     public void delete(String ownerEmail, Long id) {
         FileObject file = getOne(ownerEmail, id);
@@ -102,6 +126,10 @@ public class FileService {
         files.delete(file);
     }
 
+    /**
+     * Lists S3 objects under the current user's storage prefix.
+     * Directory markers are filtered out before mapping to response DTOs.
+     */
     public List<FileDTO.S3ObjectResponse> listS3Files(String ownerEmail) {
         String prefix = userPrefix(ownerEmail);
         ListObjectsV2Request request = ListObjectsV2Request.builder()
@@ -117,6 +145,10 @@ public class FileService {
                 .toList();
     }
 
+    /**
+     * Deletes one S3 object for the user after prefix ownership validation.
+     * Related share links and optional metadata rows are removed as cleanup.
+     */
     @Transactional
     public void deleteS3File(String ownerEmail, String key) {
         Long ownerId = requireUserIdByEmail(ownerEmail);
@@ -134,6 +166,10 @@ public class FileService {
         files.findByOwnerIdAndS3Key(ownerId, key).ifPresent(files::delete);
     }
 
+    /**
+     * Downloads one user-owned S3 object and returns bytes plus response metadata.
+     * Access is denied when the key is outside the caller's prefix.
+     */
     public DownloadPayload downloadS3File(String ownerEmail, String key) {
         String prefix = userPrefix(ownerEmail);
         if (key == null || key.isBlank() || !key.startsWith(prefix)) {
@@ -155,6 +191,10 @@ public class FileService {
         }
     }
 
+    /**
+     * Uploads a multipart file to S3 and persists its metadata for the owner.
+     * The operation enforces per-user file limits before upload.
+     */
     @Transactional
     public FileObject upload(MultipartFile file, String ownerEmail) {
         if (file == null || file.isEmpty()) {
@@ -189,25 +229,45 @@ public class FileService {
         return files.save(object);
     }
 
+    /**
+     * Returns the configured S3 bucket name used by this service.
+     * Controllers expose this to help clients build object context.
+     */
     public String getBucketName() {
         return bucketName;
     }
 
+    /**
+     * Resolves a user id from email and fails with UNAUTHORIZED when missing.
+     * Email is normalized to lowercase before lookup.
+     */
     private Long requireUserIdByEmail(String email) {
         User user = users.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
         return user.getId();
     }
 
+    /**
+     * Normalizes an email into a safe folder segment for S3 keys.
+     * Invalid characters are replaced and empty values map to "anonymous".
+     */
     private String normalizeOwner(String email) {
         String normalized = email == null ? "" : email.trim().toLowerCase().replaceAll("[^a-z0-9._-]", "_");
         return normalized.isBlank() ? "anonymous" : normalized;
     }
 
+    /**
+     * Builds the S3 prefix used to scope object operations per user.
+     * All ownership checks rely on this derived prefix.
+     */
     private String userPrefix(String email) {
         return normalizeOwner(email) + "/";
     }
 
+    /**
+     * Enforces the configured maximum file count for one owner.
+     * Throws CONFLICT when the account has reached its limit.
+     */
     private void enforceUserFileLimit(Long ownerId) {
         long current = files.countByOwnerId(ownerId);
         if (current >= maxFilesPerUser) {
@@ -218,6 +278,10 @@ public class FileService {
         }
     }
 
+    /**
+     * Maps an AWS SDK S3 object into the API response DTO shape.
+     * Bucket name is included so clients have full storage context.
+     */
     private FileDTO.S3ObjectResponse mapS3Object(S3Object object) {
         return new FileDTO.S3ObjectResponse(
                 object.key(),
@@ -227,6 +291,10 @@ public class FileService {
         );
     }
 
+    /**
+     * Removes all share links that reference one owner/key pair.
+     * This keeps share metadata consistent after deletes.
+     */
     private void removeShareLinks(Long ownerId, String key) {
         shareLinks.deleteAllByOwnerIdAndS3Key(ownerId, key);
     }

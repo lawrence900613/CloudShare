@@ -26,10 +26,18 @@ public class FileController {
 
     private final FileService fileService;
 
+    /**
+     * Creates the controller with the file service dependency used by all endpoints.
+     * This keeps HTTP handling thin and delegates business logic to the service layer.
+     */
     public FileController(FileService fileService) {
         this.fileService = fileService;
     }
 
+    /**
+     * Creates a new file record for the authenticated user using the request payload.
+     * Returns the saved file metadata in API response format.
+     */
     @PostMapping
     public FileDTO.FileResponse create(
             Authentication authentication,
@@ -39,6 +47,10 @@ public class FileController {
         return new FileDTO.FileResponse(saved, fileService.getBucketName());
     }
 
+    /**
+     * Returns a paginated list of file records owned by the authenticated user.
+     * Each item is mapped to the API response DTO including the bucket context.
+     */
     @GetMapping
     public List<FileDTO.FileResponse> list(
             Authentication authentication,
@@ -51,6 +63,10 @@ public class FileController {
                 .toList();
     }
 
+    /**
+     * Returns one file record owned by the authenticated user by id.
+     * The response includes metadata and bucket context for client usage.
+     */
     @GetMapping("/{id}")
     public FileDTO.FileResponse get(
             Authentication authentication,
@@ -60,6 +76,10 @@ public class FileController {
         return new FileDTO.FileResponse(file, fileService.getBucketName());
     }
 
+    /**
+     * Renames a file record owned by the authenticated user.
+     * Returns the updated file metadata after persisting the new name.
+     */
     @PatchMapping("/{id}")
     public FileDTO.FileResponse rename(
             Authentication authentication,
@@ -70,6 +90,10 @@ public class FileController {
         return new FileDTO.FileResponse(file, fileService.getBucketName());
     }
 
+    /**
+     * Deletes a file record and associated storage object for the authenticated user.
+     * This endpoint returns no body on success.
+     */
     @DeleteMapping("/{id}")
     public void delete(
             Authentication authentication,
@@ -78,11 +102,19 @@ public class FileController {
         fileService.delete(authentication.getName(), id);
     }
 
+    /**
+     * Lists S3 objects that belong to the authenticated user prefix.
+     * Results are returned as object metadata DTOs.
+     */
     @GetMapping("/s3")
     public List<FileDTO.S3ObjectResponse> listS3(Authentication authentication) {
         return fileService.listS3Files(authentication.getName());
     }
 
+    /**
+     * Deletes one S3 object owned by the authenticated user by key.
+     * This also clears related share link metadata when present.
+     */
     @DeleteMapping("/s3")
     public void deleteFromS3(
             Authentication authentication,
@@ -91,6 +123,10 @@ public class FileController {
         fileService.deleteS3File(authentication.getName(), key);
     }
 
+    /**
+     * Downloads one user owned S3 object and returns it as an attachment response.
+     * Content type falls back to octet-stream when missing from object metadata.
+     */
     @GetMapping("/s3/download")
     public ResponseEntity<byte[]> downloadFromS3(
             Authentication authentication,
@@ -107,6 +143,10 @@ public class FileController {
                 .body(payload.bytes());
     }
 
+    /**
+     * Uploads a multipart file to S3 for the current authenticated user.
+     * Returns the persisted file record metadata after a successful upload.
+     */
     @PostMapping("/upload")
     public FileDTO.FileResponse upload(
             @RequestPart("file") MultipartFile file,

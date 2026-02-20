@@ -1,6 +1,7 @@
 package com.example.fileshare.config;
 
 import com.example.fileshare.request.JwtHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,9 +20,18 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtHandler jwtFilter;
+    private final List<String> allowedCorsOrigins;
+    private final boolean h2ConsoleEnabled;
 
-    public SecurityConfig(JwtHandler jwtFilter) {
+    public SecurityConfig(
+            JwtHandler jwtFilter,
+            @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173}")
+            List<String> allowedCorsOrigins,
+            @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled
+    ) {
         this.jwtFilter = jwtFilter;
+        this.allowedCorsOrigins = allowedCorsOrigins;
+        this.h2ConsoleEnabled = h2ConsoleEnabled;
     }
 
     @Bean
@@ -29,15 +39,18 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/h2-console/**", "/api/shares/public/**").permitAll()
-                        .requestMatchers("/api/shares/**").authenticated()
-                        .requestMatchers("/api/files/**").authenticated()
-                        .requestMatchers("/api/secure/**").authenticated()
-                        .anyRequest().permitAll()
-                )
-                .headers(h -> h.frameOptions(f -> f.disable())) // H2 console
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    auth.requestMatchers("/api/auth/**", "/api/shares/public/**").permitAll();
+                    if (h2ConsoleEnabled) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                    }
+                    auth.requestMatchers("/api/shares/**").authenticated();
+                    auth.requestMatchers("/api/files/**").authenticated();
+                    auth.requestMatchers("/api/secure/**").authenticated();
+                    auth.anyRequest().permitAll();
+                })
+                .headers(h -> h.frameOptions(f -> f.sameOrigin()))
                 .formLogin(form -> form.disable())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -51,7 +64,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"));
+        config.setAllowedOrigins(allowedCorsOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Content-Disposition"));
