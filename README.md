@@ -1,6 +1,6 @@
-﻿# FileShare
+﻿# CloudShare
 
-FileShare is a full-stack file storage app:
+CloudShare is a full-stack file storage app:
 - Spring Boot backend
 - React frontend
 - AWS S3 for file storage
