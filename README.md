@@ -53,7 +53,6 @@ Deprecated endpoint:
 ### 3. Authentication and secure access
 - Login uses JWT tokens for stateless API authentication.
 - Passwords are stored with BCrypt hashing.
-- Email-based registration and verification are included in the auth flow.
 - Access control is enforced so users operate only on their own file/share data.
 
 ## Stack
