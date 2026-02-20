@@ -5,8 +5,7 @@ CloudShare is a full-stack file storage app:
 - React frontend
 - AWS S3 for file storage
 
-This project is built for self-learning and hands-on practice with a full backend workflow: designing APIs, authentication, file storage, sharing, and testing.
-
+This project was built for self-learning and hands-on practice across a full-stack workflow, including API design, authentication, cloud file storage, sharing, testing, and frontend development.
 The repo includes local development setup for both backend and frontend.
 
 ## What it does
@@ -18,6 +17,10 @@ The repo includes local development setup for both backend and frontend.
 - Real cloud rename (S3 copy + delete) with metadata/share-link rekey
 - File previews in the UI (image, PDF, text-like files)
 - Create and revoke share links
+
+Sample UI
+<img width="2265" height="1242" alt="image" src="https://github.com/user-attachments/assets/7e3402a4-c2fb-4019-9200-a0d2d39769b6" />
+
 
 ## Feature breakdown
 
