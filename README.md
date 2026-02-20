@@ -11,7 +11,7 @@ The repo includes local development setup for both backend and frontend.
 ## What it does
 
 - User registration and login
-- Email verification flow
+- Email verification flow (TBD)
 - Upload, list, download, and delete files
 - Direct browser-to-S3 uploads using presigned URLs
 - Real cloud rename (S3 copy + delete) with metadata/share-link rekey
