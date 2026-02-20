@@ -1,11 +1,13 @@
 :root {
-  --bg: #eef2f7;
+  --bg: #eaf0f8;
   --card: #ffffff;
   --line: #d9e1ea;
   --text: #132032;
   --muted: #607289;
-  --primary: #236fe9;
-  --primary-dark: #1958ba;
+  --primary: #2f6fdb;
+  --primary-dark: #275eb8;
+  --rail: #2d8bd1;
+  --rail-dark: #2578b8;
   --danger: #ca2e4e;
   --shadow: 0 10px 26px rgba(12, 29, 52, 0.08);
 }
@@ -14,31 +16,153 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--bg);
+}
+
 body {
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(1100px 500px at 0% 0%, #d6e4ff 0, rgba(214, 228, 255, 0) 60%),
-    radial-gradient(900px 450px at 100% 0%, #def4ed 0, rgba(222, 244, 237, 0) 60%),
-    var(--bg);
+  background: var(--bg);
+}
+
+.layoutFrame {
+  width: min(1520px, calc(100vw - 24px));
+  margin: 14px auto;
+  min-height: calc(100vh - 28px);
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 22px 44px rgba(20, 42, 68, 0.12);
+}
+
+.layoutFrameNoSidebar {
+  grid-template-columns: 1fr;
+}
+
+.navRail {
+  background: linear-gradient(180deg, var(--rail), var(--rail-dark));
+  color: #dff1ff;
+  padding: 12px 8px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.brandDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #fff;
+  opacity: 0.9;
+}
+
+.sideMenu {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.sideItem {
+  background: transparent !important;
+  color: #e7f5ff;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 9px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid transparent;
+}
+
+.sideItem:hover,
+.sideItem.active {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .appShell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 18px 14px 28px;
+  background: #edf3fa;
+  padding: 16px 18px 22px;
+}
+
+.appHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
 }
 
 .appHeader h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.2rem;
   letter-spacing: -0.02em;
 }
 
 .appHeader p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
+}
+
+.dashboardTopbar {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.searchBox {
+  width: min(360px, 100%);
+}
+
+.searchBox input {
+  border-radius: 10px;
+  background: #f7f9fd;
+}
+
+.profileChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f6f9fe;
+  border: 1px solid var(--line);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.profileName {
+  font-size: 0.82rem;
+  color: #334a66;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .backendLabel {
@@ -82,7 +206,7 @@ body {
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .statCard {
@@ -90,7 +214,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 13px;
   padding: 10px 12px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 5px 12px rgba(13, 42, 82, 0.08);
 }
 
 .statCard span {
@@ -108,19 +232,94 @@ body {
   margin-top: 14px;
   display: grid;
   grid-template-columns: 0.95fr 1.35fr;
-  gap: 12px;
+  gap: 14px;
+}
+
+.workspaceShowcase {
+  grid-template-columns: 1.55fr 0.95fr;
+  align-items: start;
+}
+
+.workspaceSingle {
+  grid-template-columns: 1fr;
+}
+
+.mainColumn .card,
+.sideColumn .card {
+  border-radius: 12px;
+}
+
+.workspaceSingle .mainColumn .card {
+  min-height: 320px;
+}
+
+.authCard {
+  min-height: 320px;
+}
+
+.authGuest {
+  display: grid;
+  place-items: center;
+}
+
+.authGuestBody {
+  width: min(780px, 100%);
+}
+
+.authGuestBody .actions {
+  justify-content: center;
+}
+
+.recentStrip {
+  margin-top: 12px;
+}
+
+.recentStrip h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recentCard {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 3px 10px rgba(13, 42, 82, 0.06);
+  min-height: 68px;
+  display: grid;
+  align-content: space-between;
+}
+
+.recentCard strong {
+  font-size: 0.82rem;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.recentCard span {
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .stack {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 12px;
+  padding: 14px;
   box-shadow: var(--shadow);
 }
 
@@ -192,6 +391,21 @@ button:disabled {
   opacity: 0.6;
 }
 
+.sideItem,
+.sideItem:hover {
+  background: transparent;
+  color: #e7f5ff;
+}
+
+.sideItem.active,
+.sideItem.active:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.muted {
+  color: var(--muted);
+}
+
 .sectionHeader {
   display: flex;
   justify-content: space-between;
@@ -220,7 +434,7 @@ td {
 }
 
 th {
-  background: #f6f9fd;
+  background: #f2f6fb;
   color: #526882;
   font-size: 0.84rem;
 }
@@ -308,6 +522,31 @@ td {
 }
 
 @media (max-width: 980px) {
+  .layoutFrame {
+    width: min(100%, calc(100vw - 16px));
+    margin: 8px auto;
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .navRail {
+    grid-template-rows: auto auto;
+    gap: 10px;
+  }
+
+  .sideMenu {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .sideItem {
+    text-align: center;
+    justify-content: center;
+  }
+
+  .appShell {
+    padding: 14px 10px 20px;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }
@@ -318,6 +557,10 @@ td {
 }
 
 @media (max-width: 760px) {
+  .recentGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .fieldGroup.two {
     grid-template-columns: 1fr;
   }

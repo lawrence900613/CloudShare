@@ -42,7 +42,7 @@ public class RequestService {
         }
 
         if (users.existsByEmail(normalizedEmail)) {
-            throw new ResponseStatusException(CONFLICT, "Email already registered");
+            throw new ResponseStatusException(CONFLICT, "Account existed.");
         }
 
         User u = new User();
@@ -56,9 +56,9 @@ public class RequestService {
 
     public String login(String email, String rawPassword) {
         User u = users.findByEmail(normalizeEmail(email))
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Invalid credentials"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Account not found."));
         if (!encoder.matches(rawPassword, u.getPasswordHashed())) {
-            throw new ResponseStatusException(NOT_FOUND, "Invalid credentials");
+            throw new ResponseStatusException(NOT_FOUND, "Password not correct.");
         }
         return jwt.generateToken(u.getEmail());
     }

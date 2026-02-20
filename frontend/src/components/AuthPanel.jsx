@@ -10,17 +10,20 @@ function AuthPanel({ sessionActive, onRegister, onLogin, onLogout }) {
   };
 
   return (
-    <section className="card">
-      <h2>Account</h2>
+    <section className={`card authCard ${sessionActive ? "authLoggedIn" : "authGuest"}`}>
       {sessionActive ? (
-        <div className="actions">
-          <p className="muted">You are logged in.</p>
-          <button className="ghost" onClick={onLogout}>
-            Logout
-          </button>
+        <div>
+          <h2>Account</h2>
+          <div className="actions">
+            <p className="muted">You are logged in.</p>
+            <button className="ghost" onClick={onLogout}>
+              Logout
+            </button>
+          </div>
         </div>
       ) : (
-        <>
+        <div className="authGuestBody">
+          <h2>Account</h2>
           <div className="fieldGroup two">
             <label>
               Email
@@ -47,7 +50,7 @@ function AuthPanel({ sessionActive, onRegister, onLogin, onLogout }) {
             <button onClick={() => submit(onRegister)}>Register</button>
             <button onClick={() => submit(onLogin)}>Login</button>
           </div>
-        </>
+        </div>
       )}
     </section>
   );
