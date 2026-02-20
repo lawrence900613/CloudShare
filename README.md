@@ -88,6 +88,38 @@ Default URLs:
 - Backend: `http://localhost:8080`
 - Frontend: `http://localhost:5173`
 
+## Real Deployment
+This section shows the real deployment configuration used to run CloudShare with production infrastructure (PostgreSQL, AWS S3, and strict CORS).
+Use Spring profile `prod` to load `application-prod.properties` overrides.
+
+### 1. Set active profile
+```bash
+SPRING_PROFILES_ACTIVE=prod
+```
+
+### 2. Set required environment variables
+```bash
+SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<db>
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_DATASOURCE_USERNAME=<db_user>
+SPRING_DATASOURCE_PASSWORD=<db_password>
+
+APP_JWT_SECRET=<long_random_secret>
+APP_AWS_S3_BUCKET=<bucket_name>
+APP_AWS_ACCESS_KEY=<aws_access_key>
+APP_AWS_SECRET_KEY=<aws_secret_key>
+APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES=10
+
+APP_PUBLIC_BASE_URL=https://<backend-domain>
+APP_VERIFICATION_BASE_URL=https://<frontend-domain>
+APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://www.<frontend-domain>
+```
+
+### 3. Start backend in production mode
+```bash
+java -Dspring.profiles.active=prod -jar build/libs/FileShare-0.0.1-SNAPSHOT.jar
+```
+
 ## S3 CORS requirement for direct upload
 Because uploads are sent from browser directly to S3, bucket CORS must allow your frontend origin and `PUT`.
 
