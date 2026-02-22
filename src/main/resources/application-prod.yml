@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    show-sql: false
+  sql:
+    init:
+      mode: never
+  h2:
+    console:
+      enabled: false
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+  aws:
+    s3:
+      bucket: ${APP_AWS_S3_BUCKET}
+      presign-put-ttl-minutes: ${APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES:10}
+    access-key: ${APP_AWS_ACCESS_KEY}
+    secret-key: ${APP_AWS_SECRET_KEY}
+  public-base-url: ${APP_PUBLIC_BASE_URL}
+  verification:
+    base-url: ${APP_VERIFICATION_BASE_URL}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
