@@ -88,6 +88,35 @@ Default URLs:
 - Backend: `http://localhost:8080`
 - Frontend: `http://localhost:5173`
 
+Note:
+- Local deployment can share documents only with devices on the same Wi-Fi/LAN.
+- `localhost` links are not accessible from external networks.
+
+### Change `localhost` to LAN IP (for same Wi-Fi sharing)
+1. Find your PC IPv4 address:
+```bash
+ipconfig
+```
+Use the active adapter IPv4 (example: `192.168.1.25`).
+
+2. Set backend public base URL:
+```bash
+APP_PUBLIC_BASE_URL=http://192.168.1.25:8080
+```
+If you use `.properties` directly:
+```properties
+app.public-base-url=http://192.168.1.25:8080
+```
+
+3. Allow frontend origin in CORS:
+```bash
+APP_CORS_ALLOWED_ORIGINS=http://192.168.1.25:5173,http://localhost:5173
+```
+
+4. Restart backend and create a new share link.
+
+5. Make sure firewall allows inbound TCP `8080` (and `5173` if frontend is accessed from other devices).
+
 ## Real Deployment
 This section shows the real deployment configuration used to run CloudShare with production infrastructure (PostgreSQL, AWS S3, and strict CORS).
 Use Spring profile `prod` to load `application-prod.properties` overrides.
