@@ -118,7 +118,7 @@ APP_CORS_ALLOWED_ORIGINS=http://192.168.1.25:5173,http://localhost:5173
 
 ## Real Deployment
 This section shows the real deployment configuration used to run CloudShare with production infrastructure (PostgreSQL, AWS S3, and strict CORS).
-Use Spring profile `prod` to load `application-prod.properties` overrides.
+Use Spring profile `prod` to load `application-prod.yml` overrides.
 
 ### 1. Set active profile
 ```bash
