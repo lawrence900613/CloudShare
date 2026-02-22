@@ -71,7 +71,7 @@ Sample UI
 2. Run the frontend:
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
