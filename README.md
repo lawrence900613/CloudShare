@@ -14,7 +14,7 @@ The repo includes local development setup for both backend and frontend.
 - Email verification flow (TBD)
 - Upload, list, download, and delete files
 - Direct browser-to-S3 uploads using presigned URLs
-- Real cloud rename (S3 copy + delete) with metadata/share-link rekey
+- Rename file in cloud (s3) with metadata/share-link rekey
 - File previews in the UI (image, PDF, text-like files)
 - Create and revoke share links
 
@@ -27,7 +27,7 @@ Sample UI
 ### 1. File upload, download, and preview
 - Files are uploaded directly from browser to S3 using presigned PUT URLs.
 - Backend finalizes uploads by validating object ownership and saving metadata.
-- Users can list only their own files and view basic metadata.
+- Users can only access their own files and view basic metadata such as file size and uploaded time.
 - Preview is supported in the dashboard for image, PDF, and text-like files.
 - Download and delete actions are permission-scoped to file ownership.
 
@@ -35,9 +35,6 @@ Sample UI
 1. `POST /api/files/upload/presigned` returns `{ s3Key, uploadUrl, method }`.
 2. Frontend uploads bytes directly to S3 using the returned URL.
 3. `POST /api/files/upload/complete` persists metadata after S3 object verification.
-
-Deprecated endpoint:
-- `POST /api/files/upload` remains available but is deprecated.
 
 ### 1.2 Real cloud rename
 - `PATCH /api/files/{id}` performs S3 rename via copy + delete.
@@ -74,7 +71,7 @@ Deprecated endpoint:
 2. Run the frontend:
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
