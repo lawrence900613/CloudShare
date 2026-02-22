@@ -28,6 +28,20 @@ public class RequestDTO {
         public String email;
     }
 
+    public static class ForgotPasswordDTO {
+        @NotBlank
+        @Email(message = "Email must be valid")
+        public String email;
+    }
+
+    public static class ResetPasswordDTO {
+        @NotBlank
+        public String token;
+        @NotBlank
+        @Size(min = 6, message = "Password must be at least 6 characters")
+        public String password;
+    }
+
     public static class TokenDTO {
         public String token;
         public TokenDTO(String token) { this.token = token; }

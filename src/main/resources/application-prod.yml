@@ -1,4 +1,15 @@
 spring:
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:true}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
@@ -17,13 +28,20 @@ app:
   jwt:
     secret: ${APP_JWT_SECRET}
   aws:
+    region: ${APP_AWS_REGION:us-west-2}
+    access-key: ${APP_AWS_ACCESS_KEY:}
+    secret-key: ${APP_AWS_SECRET_KEY:}
     s3:
       bucket: ${APP_AWS_S3_BUCKET}
       presign-put-ttl-minutes: ${APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES:10}
-    access-key: ${APP_AWS_ACCESS_KEY}
-    secret-key: ${APP_AWS_SECRET_KEY}
+  files:
+    max-per-user: ${APP_FILES_MAX_PER_USER:5}
   public-base-url: ${APP_PUBLIC_BASE_URL}
   verification:
     base-url: ${APP_VERIFICATION_BASE_URL}
+    token-ttl-minutes: ${APP_VERIFICATION_TOKEN_TTL_MINUTES:30}
+  password-reset:
+    base-url: ${APP_PASSWORD_RESET_BASE_URL}
+    token-ttl-minutes: ${APP_PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}

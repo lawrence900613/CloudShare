@@ -16,6 +16,7 @@ function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [notice, setNotice] = useState({ kind: "info", message: "" });
   const [activeMenu, setActiveMenu] = useState("account");
+  const [registerCooldownSeconds, setRegisterCooldownSeconds] = useState(0);
 
   const sessionActive = Boolean(token);
   const emailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -45,6 +46,11 @@ function DashboardPage() {
   };
 
   const register = async (email, password) => {
+    if (registerCooldownSeconds > 0) {
+      showNotice("info", `Please wait ${registerCooldownSeconds}s before registering again.`);
+      return;
+    }
+
     if (!isValidEmail(email)) {
       showNotice("error", "Enter a valid email address.");
       return;
@@ -52,6 +58,7 @@ function DashboardPage() {
     try {
       const response = await apiClient.register(email, password);
       showNotice("success", response.message || "Registration successful.");
+      setRegisterCooldownSeconds(10);
     } catch (error) {
       showNotice("error", normalizeAuthError(error, "register"));
     }
@@ -194,6 +201,14 @@ function DashboardPage() {
     refreshShares();
   }, [token]);
 
+  useEffect(() => {
+    if (registerCooldownSeconds <= 0) return undefined;
+    const timer = setInterval(() => {
+      setRegisterCooldownSeconds((current) => (current <= 1 ? 0 : current - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [registerCooldownSeconds]);
+
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const matchesSearch = (value) => String(value || "").toLowerCase().includes(normalizedSearch);
 
@@ -288,6 +303,7 @@ function DashboardPage() {
             onRegister={register}
             onLogin={login}
             onLogout={logout}
+            registerCooldownSeconds={registerCooldownSeconds}
           />
         );
     }

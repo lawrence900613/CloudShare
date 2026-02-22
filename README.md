@@ -11,7 +11,8 @@ The repo includes local development setup for both backend and frontend.
 ## What it does
 
 - User registration and login
-- Email verification flow (TBD)
+- Email verification flow (token by email)
+- Forgot password flow (email reset link + token-based reset)
 - Upload, list, download, and delete files
 - Direct browser-to-S3 uploads using presigned URLs
 - Rename file in cloud (s3) with metadata/share-link rekey
@@ -51,6 +52,15 @@ Sample UI
 - Login uses JWT tokens for stateless API authentication.
 - Passwords are stored with BCrypt hashing.
 - Access control is enforced so users operate only on their own file/share data.
+- Accounts must verify email before login is allowed.
+- Register and forgot-password UI use a 10-second cooldown after sending email links.
+
+### 3.1 Auth endpoints
+- `POST /api/auth/register` creates a new account (or refreshes unverified account) and sends verification link.
+- `GET /api/auth/verify?token=...` verifies account email.
+- `POST /api/auth/resend-verification` resends verification email for unverified accounts.
+- `POST /api/auth/forgot-password` sends a reset link (generic success response).
+- `POST /api/auth/reset-password` sets a new password using reset token.
 
 ## Stack
 
@@ -83,6 +93,11 @@ VITE_API_BASE_URL=http://localhost:8080
 Default URLs:
 - Backend: `http://localhost:8080`
 - Frontend: `http://localhost:5173`
+
+Frontend routes:
+- `/verify-email?token=...`
+- `/forgot-password`
+- `/reset-password?token=...`
 
 Note:
 - Local deployment can share documents only with devices on the same Wi-Fi/LAN.
@@ -137,7 +152,17 @@ APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES=10
 
 APP_PUBLIC_BASE_URL=https://<backend-domain>
 APP_VERIFICATION_BASE_URL=https://<frontend-domain>
+APP_VERIFICATION_TOKEN_TTL_MINUTES=30
+APP_PASSWORD_RESET_BASE_URL=https://<frontend-domain>
+APP_PASSWORD_RESET_TOKEN_TTL_MINUTES=30
 APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://www.<frontend-domain>
+
+SPRING_MAIL_HOST=smtp.gmail.com
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=<smtp_username>
+SPRING_MAIL_PASSWORD=<smtp_password_or_app_password>
+SPRING_MAIL_SMTP_AUTH=true
+SPRING_MAIL_SMTP_STARTTLS_ENABLE=true
 ```
 
 ### 3. Start backend in production mode

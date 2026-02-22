@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
-function AuthPanel({ sessionActive, onRegister, onLogin, onLogout }) {
+function AuthPanel({ sessionActive, onRegister, onLogin, onLogout, registerCooldownSeconds = 0 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const registerLocked = registerCooldownSeconds > 0;
 
   const submit = (handler) => {
     if (!email.trim() || !password) return;
@@ -47,8 +49,13 @@ function AuthPanel({ sessionActive, onRegister, onLogin, onLogout }) {
             </label>
           </div>
           <div className="actions">
-            <button onClick={() => submit(onRegister)}>Register</button>
+            <button disabled={registerLocked} onClick={() => submit(onRegister)}>
+              {registerLocked ? `Register (${registerCooldownSeconds}s)` : "Register"}
+            </button>
             <button onClick={() => submit(onLogin)}>Login</button>
+            <Link className="linkButton ghostLinkButton" to="/forgot-password">
+              Forgot Password
+            </Link>
           </div>
         </div>
       )}

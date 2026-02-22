@@ -52,6 +52,22 @@ export const apiClient = {
     });
   },
 
+  forgotPassword(email) {
+    return request("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+  },
+
+  resetPassword(token, password) {
+    return request("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, password })
+    });
+  },
+
   listFiles(token) {
     return request("/api/files?page=0&size=200", {
       headers: { Authorization: `Verify ${token}` }

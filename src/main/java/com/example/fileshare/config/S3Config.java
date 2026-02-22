@@ -18,8 +18,8 @@ public class S3Config {
     @Bean
     public S3Client s3Client(
             @Value("${app.aws.region}") String region,
-            @Value("${app.aws.access-key:}") String accessKey,
-            @Value("${app.aws.secret-key:}") String secretKey
+            @Value("${app.aws.access-key}") String accessKey,
+            @Value("${app.aws.secret-key}") String secretKey
     ) {
         S3ClientBuilder builder = S3Client.builder().region(Region.of(region));
         builder.credentialsProvider(resolveCredentialsProvider(accessKey, secretKey));
@@ -29,8 +29,8 @@ public class S3Config {
     @Bean
     public S3Presigner s3Presigner(
             @Value("${app.aws.region}") String region,
-            @Value("${app.aws.access-key:}") String accessKey,
-            @Value("${app.aws.secret-key:}") String secretKey
+            @Value("${app.aws.access-key}") String accessKey,
+            @Value("${app.aws.secret-key}") String secretKey
     ) {
         return S3Presigner.builder()
                 .region(Region.of(region))

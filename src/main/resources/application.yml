@@ -1,8 +1,17 @@
 spring:
-  application:
-    name: FileShare
   config:
     import: optional:file:./application-secrets.properties
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:replace-it}
+    password: ${SPRING_MAIL_PASSWORD:replace-it}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:true}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/fileshare}
     driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
@@ -12,9 +21,6 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
     defer-datasource-initialization: true
   sql:
     init:
@@ -30,21 +36,22 @@ app:
     ttlMinutes: 60
   aws:
     region: us-west-2
+    access-key: ${APP_AWS_ACCESS_KEY:replace-it}
+    secret-key: ${APP_AWS_SECRET_KEY:replace-it}
     s3:
-      bucket: replace-it
+      bucket: fileshare-dev-files-037534359333
       presign-put-ttl-minutes: ${APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES:10}
-    access-key: replace-it
-    secret-key: replace-it
   files:
     max-per-user: ${APP_FILES_MAX_PER_USER:5}
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
   verification:
     base-url: ${APP_VERIFICATION_BASE_URL:http://localhost:5173}
+    token-ttl-minutes: ${APP_VERIFICATION_TOKEN_TTL_MINUTES:30}
+  password-reset:
+    base-url: ${APP_PASSWORD_RESET_BASE_URL:http://localhost:5173}
+    token-ttl-minutes: ${APP_PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173}
-  mail:
-    enabled: ${APP_MAIL_ENABLED:false}
-    from: ${APP_MAIL_FROM:no-reply@fileshare.local}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173}
 
 server:
   forward-headers-strategy: framework

@@ -57,8 +57,8 @@ public class FileService {
             S3Client s3Client,
             S3Presigner s3Presigner,
             @Value("${app.aws.s3.bucket}") String bucketName,
-            @Value("${app.files.max-per-user:5}") int maxFilesPerUser,
-            @Value("${app.aws.s3.presign-put-ttl-minutes:10}") long presignPutTtlMinutes
+            @Value("${app.files.max-per-user}") int maxFilesPerUser,
+            @Value("${app.aws.s3.presign-put-ttl-minutes}") long presignPutTtlMinutes
     ) {
         this.files = files;
         this.users = users;

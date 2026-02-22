@@ -1,7 +1,6 @@
 package com.example.fileshare.request;
 import com.example.fileshare.dto.RequestDTO.*;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,8 +15,11 @@ public class RequestController {
 
     @PostMapping("/register")
     public RegisterResponseDTO register(@Valid @RequestBody RegisterDTO req) {
-        service.register(req.email, req.password);
-        return new RegisterResponseDTO("Registration successful.", false);
+        boolean sent = service.register(req.email, req.password);
+        String message = sent
+                ? "Registration successful. Please check your email to verify your account. It might takes some time."
+                : "Registration successful. Email sending is disabled in this environment.";
+        return new RegisterResponseDTO(message, sent);
     }
 
     @PostMapping("/login")
@@ -29,12 +31,27 @@ public class RequestController {
     @GetMapping("/verify")
     public MessageDTO verify(@RequestParam String token) {
         service.verifyEmail(token);
-        return new MessageDTO("Email verification is currently disabled.");
+        return new MessageDTO("Email verified successfully.");
     }
 
     @PostMapping("/resend-verification")
     public RegisterResponseDTO resendVerification(@Valid @RequestBody ResendVerificationDTO req) {
-        service.resendVerification(req.email);
-        return new RegisterResponseDTO("Email verification is currently disabled.", false);
+        boolean sent = service.resendVerification(req.email);
+        String message = sent
+                ? "Verification email sent."
+                : "Email is already verified or email sending is disabled.";
+        return new RegisterResponseDTO(message, sent);
+    }
+
+    @PostMapping("/forgot-password")
+    public MessageDTO forgotPassword(@Valid @RequestBody ForgotPasswordDTO req) {
+        service.forgotPassword(req.email);
+        return new MessageDTO("If the account exists, a password reset email has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public MessageDTO resetPassword(@Valid @RequestBody ResetPasswordDTO req) {
+        service.resetPassword(req.token, req.password);
+        return new MessageDTO("Password reset successful. Please login with your new password.");
     }
 }

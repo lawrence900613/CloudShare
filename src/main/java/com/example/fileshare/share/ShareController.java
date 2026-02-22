@@ -25,7 +25,7 @@ public class ShareController {
 
     public ShareController(
             ShareService shareService,
-            @org.springframework.beans.factory.annotation.Value("${app.public-base-url:http://localhost:8080}") String publicBaseUrl
+            @org.springframework.beans.factory.annotation.Value("${app.public-base-url}") String publicBaseUrl
     ) {
         this.shareService = shareService;
         this.publicBaseUrl = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;

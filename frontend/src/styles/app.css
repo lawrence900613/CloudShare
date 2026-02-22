@@ -382,6 +382,10 @@ button.ghost {
   background: #4f637c;
 }
 
+.ghostLinkButton {
+  background: #4f637c;
+}
+
 button.danger {
   background: var(--danger);
 }
@@ -466,7 +470,43 @@ td {
 }
 
 .verifyCard {
-  max-width: 600px;
+  max-width: 620px;
+  margin: 24px auto 0;
+  border-width: 2px;
+}
+
+.verifyCard-info {
+  border-color: #cde0ff;
+  background: linear-gradient(180deg, #f6faff, #ffffff);
+}
+
+.verifyCard-success {
+  border-color: #b8e8cf;
+  background: linear-gradient(180deg, #f4fcf7, #ffffff);
+}
+
+.verifyCard-error {
+  border-color: #f5bec9;
+  background: linear-gradient(180deg, #fff7f8, #ffffff);
+}
+
+.verifyBadge {
+  margin: 0;
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #255786;
+  background: #e7f2ff;
+  border: 1px solid #bfdbff;
+}
+
+.verifyHint {
+  margin: 10px 0 0;
+  color: #526882;
 }
 
 .previewOverlay {
