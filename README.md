@@ -11,7 +11,7 @@ The repo includes local development setup for both backend and frontend.
 ## What it does
 
 - User registration and login
-- Email verification flow
+- Email verification flow (TBD)
 - Upload, list, download, and delete files
 - Direct browser-to-S3 uploads using presigned URLs
 - Real cloud rename (S3 copy + delete) with metadata/share-link rekey
@@ -53,7 +53,6 @@ Deprecated endpoint:
 ### 3. Authentication and secure access
 - Login uses JWT tokens for stateless API authentication.
 - Passwords are stored with BCrypt hashing.
-- Email-based registration and verification are included in the auth flow.
 - Access control is enforced so users operate only on their own file/share data.
 
 ## Stack
