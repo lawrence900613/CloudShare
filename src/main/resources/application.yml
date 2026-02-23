@@ -13,10 +13,10 @@ spring:
           starttls:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:true}
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/fileshare}
-    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
-    username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    url: ${SPRING_DATASOURCE_URL:replace-it}
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:replace-it}
+    password: ${SPRING_DATASOURCE_PASSWORD:replace-it}
   jpa:
     hibernate:
       ddl-auto: update
@@ -27,10 +27,11 @@ spring:
       mode: always
   h2:
     console:
-      enabled: true
+      enabled: ${APP_H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
 app:
+  h2-console-enabled: ${APP_H2_CONSOLE_ENABLED:false}
   jwt:
     secret: CHANGE_ME_WITH_A_LONG_RANDOM_SECRET
     ttlMinutes: 60
@@ -39,7 +40,7 @@ app:
     access-key: ${APP_AWS_ACCESS_KEY:replace-it}
     secret-key: ${APP_AWS_SECRET_KEY:replace-it}
     s3:
-      bucket: fileshare-dev-files-037534359333
+      bucket: replace-it
       presign-put-ttl-minutes: ${APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES:10}
   files:
     max-per-user: ${APP_FILES_MAX_PER_USER:5}

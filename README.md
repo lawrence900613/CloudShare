@@ -103,6 +103,32 @@ Note:
 - Local deployment can share documents only with devices on the same Wi-Fi/LAN.
 - `localhost` links are not accessible from external networks.
 
+### Local PostgreSQL setup (`application.yml`)
+If you want to run locally with PostgreSQL (pgAdmin), first create the database:
+```sql
+CREATE DATABASE fileshare;
+```
+
+Then configure datasource values in `src/main/resources/application.yml`:
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fileshare
+    driverClassName: org.postgresql.Driver
+    username: postgres
+    password: your_postgres_password
+```
+
+You can also keep credentials in environment variables:
+```bash
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/fileshare
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=<your_password>
+```
+
+Table creation is handled automatically on startup by JPA/Hibernate (`spring.jpa.hibernate.ddl-auto=update`).
+
 ### Change `localhost` to LAN IP (for same Wi-Fi sharing)
 1. Find your PC IPv4 address:
 ```bash

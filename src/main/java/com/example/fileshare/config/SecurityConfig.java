@@ -27,7 +27,7 @@ public class SecurityConfig {
             JwtHandler jwtFilter,
             @Value("${app.cors.allowed-origins}")
             List<String> allowedCorsOrigins,
-            @Value("${spring.h2.console.enabled}") boolean h2ConsoleEnabled
+            @Value("${app.h2-console-enabled:false}") boolean h2ConsoleEnabled
     ) {
         this.jwtFilter = jwtFilter;
         this.allowedCorsOrigins = allowedCorsOrigins;
