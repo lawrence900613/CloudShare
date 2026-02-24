@@ -74,6 +74,6 @@ public class ShareController {
     }
 
     private String buildPublicDownloadUrl(String token) {
-        return publicBaseUrl + "/api/shares/public/" + token + "/download";
+        return publicBaseUrl + "/s/" + token;
     }
 }
