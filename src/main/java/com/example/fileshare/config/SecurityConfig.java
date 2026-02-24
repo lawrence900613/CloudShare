@@ -1,6 +1,7 @@
 package com.example.fileshare.config;
 
 import com.example.fileshare.request.JwtHandler;
+import com.example.fileshare.ratelimit.RateLimitFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,16 +21,19 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtHandler jwtFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final List<String> allowedCorsOrigins;
     private final boolean h2ConsoleEnabled;
 
     public SecurityConfig(
             JwtHandler jwtFilter,
+            RateLimitFilter rateLimitFilter,
             @Value("${app.cors.allowed-origins}")
             List<String> allowedCorsOrigins,
             @Value("${app.h2-console-enabled:false}") boolean h2ConsoleEnabled
     ) {
         this.jwtFilter = jwtFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.allowedCorsOrigins = allowedCorsOrigins;
         this.h2ConsoleEnabled = h2ConsoleEnabled;
     }
@@ -52,7 +56,8 @@ public class SecurityConfig {
                 })
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()))
                 .formLogin(form -> form.disable())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, JwtHandler.class);
         return http.build();
     }
 

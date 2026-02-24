@@ -1,3 +1,4 @@
+import { UPLOAD_RATE_LIMIT_COUNT, UPLOAD_RATE_LIMIT_WINDOW_MINUTES } from "./frontendConfig";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 async function request(path, options = {}) {
@@ -12,10 +13,31 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message =
+    const baseMessage =
       (payload && typeof payload === "object" && (payload.message || payload.error)) ||
       (typeof payload === "string" ? payload : "Request failed");
-    throw new Error(message);
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : NaN;
+
+    let message = baseMessage;
+    if (response.status === 429) {
+      if (path.startsWith("/api/files/upload")) {
+        message = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? `Upload limit reached. You can upload up to ${UPLOAD_RATE_LIMIT_COUNT} files per ${UPLOAD_RATE_LIMIT_WINDOW_MINUTES} minutes. Try again in ${retryAfterSeconds}s.`
+          : `Upload limit reached. You can upload up to ${UPLOAD_RATE_LIMIT_COUNT} files per ${UPLOAD_RATE_LIMIT_WINDOW_MINUTES} minutes.`;
+      } else {
+        message = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? `Too many requests. Please try again in ${retryAfterSeconds}s.`
+          : "Too many requests. Please try again later.";
+      }
+    }
+
+    const error = new Error(message);
+    error.status = response.status;
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      error.retryAfterSeconds = retryAfterSeconds;
+    }
+    throw error;
   }
 
   return payload;

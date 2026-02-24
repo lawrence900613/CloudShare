@@ -80,16 +80,21 @@ function VerifyEmailPage() {
   return (
     <DashboardLayout>
       <section className={`card verifyCard verifyCard-${state.kind}`}>
-        <p className="verifyBadge">Email Verification</p>
-        <h2>{state.title}</h2>
+        <div className="verifyHeader">
+          <p className="verifyBadge">Email Verification</p>
+          <span className={`verifyStateIcon verifyStateIcon-${state.kind}`} aria-hidden="true">
+            {state.kind === "success" ? "✓" : state.kind === "error" ? "!" : "•"}
+          </span>
+        </div>
+        <h2 className="verifyTitle">{state.title}</h2>
         <AlertBar kind={state.kind} message={state.message} />
         {state.showRegisterHint && (
           <p className="verifyHint">
             Open the dashboard and register with your email to receive a new verification link.
           </p>
         )}
-        <div className="actions">
-          <Link className="linkButton" to="/">
+        <div className="actions verifyActions">
+          <Link className="linkButton verifyPrimaryAction" to="/">
             Back To Dashboard
           </Link>
         </div>

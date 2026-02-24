@@ -42,12 +42,27 @@ public class ShareService {
         this.bucketName = bucketName;
     }
 
+    private static final int MAX_SHARES_PER_USER = 3;
+
     @Transactional
     public ShareLink create(String ownerEmail, ShareDTO.CreateRequest request) {
         Long ownerId = requireUserIdByEmail(ownerEmail);
         String key = request.key.trim();
         if (!key.startsWith(userPrefix(ownerEmail))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only share your own files");
+        }
+
+        // Replace any existing shares for the same file (dedup)
+        shareLinks.deleteAllByOwnerIdAndS3Key(ownerId, key);
+
+        // Enforce max 3 active share links
+        long activeCount = shareLinks.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream()
+                .filter(l -> !l.isRevoked())
+                .filter(l -> l.getExpiresAt() == null || l.getExpiresAt().isAfter(Instant.now()))
+                .count();
+        if (activeCount >= MAX_SHARES_PER_USER) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Share link limit reached (max " + MAX_SHARES_PER_USER + ")");
         }
 
         ShareLink link = new ShareLink();

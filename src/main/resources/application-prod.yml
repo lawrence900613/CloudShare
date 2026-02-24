@@ -23,8 +23,49 @@ spring:
   h2:
     console:
       enabled: false
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
 
 app:
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    fail-open: ${APP_RATE_LIMIT_FAIL_OPEN:false}
+    auth-login:
+      limit: ${APP_RATE_LIMIT_AUTH_LOGIN_LIMIT:10}
+      window: ${APP_RATE_LIMIT_AUTH_LOGIN_WINDOW:1m}
+    auth-register:
+      limit: ${APP_RATE_LIMIT_AUTH_REGISTER_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_REGISTER_WINDOW:15m}
+    auth-forgot-password:
+      limit: ${APP_RATE_LIMIT_AUTH_FORGOT_PASSWORD_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_FORGOT_PASSWORD_WINDOW:1h}
+    auth-resend-verification:
+      limit: ${APP_RATE_LIMIT_AUTH_RESEND_VERIFICATION_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_RESEND_VERIFICATION_WINDOW:1h}
+    auth-verify:
+      limit: ${APP_RATE_LIMIT_AUTH_VERIFY_LIMIT:30}
+      window: ${APP_RATE_LIMIT_AUTH_VERIFY_WINDOW:1h}
+    auth-reset-password:
+      limit: ${APP_RATE_LIMIT_AUTH_RESET_PASSWORD_LIMIT:10}
+      window: ${APP_RATE_LIMIT_AUTH_RESET_PASSWORD_WINDOW:1h}
+    files-upload-presigned:
+      limit: ${APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_LIMIT:3}
+      window: ${APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_WINDOW:15m}
+    files-upload-legacy:
+      limit: ${APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_LIMIT:3}
+      window: ${APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_WINDOW:15m}
+    shares-public-api:
+      limit: ${APP_RATE_LIMIT_SHARES_PUBLIC_API_LIMIT:120}
+      window: ${APP_RATE_LIMIT_SHARES_PUBLIC_API_WINDOW:1m}
+    shares-public-short:
+      limit: ${APP_RATE_LIMIT_SHARES_PUBLIC_SHORT_LIMIT:120}
+      window: ${APP_RATE_LIMIT_SHARES_PUBLIC_SHORT_WINDOW:1m}
   jwt:
     secret: ${APP_JWT_SECRET}
   aws:

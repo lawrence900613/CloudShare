@@ -1,6 +1,8 @@
 spring:
   config:
-    import: optional:file:./application-secrets.properties
+    import:
+      - optional:file:./application-secrets.properties
+      - optional:file:./.env[.properties]
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
@@ -29,9 +31,50 @@ spring:
     console:
       enabled: ${APP_H2_CONSOLE_ENABLED:false}
       path: /h2-console
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:2s}
+      repositories:
+        enabled: false
 
 app:
   h2-console-enabled: ${APP_H2_CONSOLE_ENABLED:false}
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    fail-open: ${APP_RATE_LIMIT_FAIL_OPEN:false}
+    auth-login:
+      limit: ${APP_RATE_LIMIT_AUTH_LOGIN_LIMIT:10}
+      window: ${APP_RATE_LIMIT_AUTH_LOGIN_WINDOW:1m}
+    auth-register:
+      limit: ${APP_RATE_LIMIT_AUTH_REGISTER_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_REGISTER_WINDOW:15m}
+    auth-forgot-password:
+      limit: ${APP_RATE_LIMIT_AUTH_FORGOT_PASSWORD_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_FORGOT_PASSWORD_WINDOW:1h}
+    auth-resend-verification:
+      limit: ${APP_RATE_LIMIT_AUTH_RESEND_VERIFICATION_LIMIT:5}
+      window: ${APP_RATE_LIMIT_AUTH_RESEND_VERIFICATION_WINDOW:1h}
+    auth-verify:
+      limit: ${APP_RATE_LIMIT_AUTH_VERIFY_LIMIT:30}
+      window: ${APP_RATE_LIMIT_AUTH_VERIFY_WINDOW:1h}
+    auth-reset-password:
+      limit: ${APP_RATE_LIMIT_AUTH_RESET_PASSWORD_LIMIT:10}
+      window: ${APP_RATE_LIMIT_AUTH_RESET_PASSWORD_WINDOW:1h}
+    files-upload-presigned:
+      limit: ${APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_LIMIT:3}
+      window: ${APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_WINDOW:15m}
+    files-upload-legacy:
+      limit: ${APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_LIMIT:3}
+      window: ${APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_WINDOW:15m}
+    shares-public-api:
+      limit: ${APP_RATE_LIMIT_SHARES_PUBLIC_API_LIMIT:120}
+      window: ${APP_RATE_LIMIT_SHARES_PUBLIC_API_WINDOW:1m}
+    shares-public-short:
+      limit: ${APP_RATE_LIMIT_SHARES_PUBLIC_SHORT_LIMIT:120}
+      window: ${APP_RATE_LIMIT_SHARES_PUBLIC_SHORT_WINDOW:1m}
   jwt:
     secret: CHANGE_ME_WITH_A_LONG_RANDOM_SECRET
     ttlMinutes: 60
@@ -40,10 +83,11 @@ app:
     access-key: ${APP_AWS_ACCESS_KEY:replace-it}
     secret-key: ${APP_AWS_SECRET_KEY:replace-it}
     s3:
-      bucket: replace-it
+      bucket: ${APP_AWS_S3_BUCKET:replace-it}
       presign-put-ttl-minutes: ${APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES:10}
   files:
-    max-per-user: ${APP_FILES_MAX_PER_USER:5}
+    max-per-user: ${APP_FILES_MAX_PER_USER:3}
+    max-size-bytes: ${APP_FILES_MAX_SIZE_BYTES:10485760}
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
   verification:
     base-url: ${APP_VERIFICATION_BASE_URL:http://localhost:5173}

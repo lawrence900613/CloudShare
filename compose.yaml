@@ -11,6 +11,15 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: cloudshare-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
   backend:
     build:
       context: .
@@ -18,14 +27,15 @@ services:
     container_name: cloudshare-backend
     depends_on:
       - db
+      - redis
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+      SPRING_DATASOURCE_URL: ${DOCKER_SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/fileshare}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${DOCKER_SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+      SPRING_DATASOURCE_USERNAME: ${DOCKER_SPRING_DATASOURCE_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DOCKER_SPRING_DATASOURCE_PASSWORD:-postgres}
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_AWS_S3_BUCKET: ${APP_AWS_S3_BUCKET}
       APP_AWS_ACCESS_KEY: ${APP_AWS_ACCESS_KEY}
@@ -41,6 +51,10 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
       SPRING_MAIL_SMTP_AUTH: "true"
       SPRING_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      APP_RATE_LIMIT_ENABLED: "true"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD}
 
   frontend:
     build:
@@ -54,5 +68,23 @@ services:
     ports:
       - "5173:80"
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: cloudshare-caddy
+    profiles: ["edge"]
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
