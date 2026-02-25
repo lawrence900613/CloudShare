@@ -1,7 +1,9 @@
 # CloudShare
+ - CloudShare is a full-stack file sharing platform built for secure upload, preview, download, and expiring share links.
+ - This project was built for self-learning and hands-on full-stack practice, covering API design, authentication, cloud file storage, file sharing, testing, and frontend development. 
+ - The repository includes both local development setup and production-level deployment setup.
+<img width="2547" height="1272" alt="image" src="https://github.com/user-attachments/assets/185286fd-3949-4d87-9e98-c20547c9ffef" />
 
-CloudShare is a full-stack file sharing platform built for secure upload, preview, download, and expiring share links.
-This project was built for self-learning and hands-on full-stack practice, covering API design, authentication, cloud file storage, file sharing, testing, and frontend development. The repository includes both local development setup and production-level deployment setup.
 
 ## Current Stack
 
