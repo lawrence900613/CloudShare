@@ -1,220 +1,200 @@
-﻿# CloudShare
+# CloudShare
 
-CloudShare is a full-stack file storage app:
-- Spring Boot backend
-- React frontend
-- AWS S3 for file storage
+CloudShare is a full-stack file sharing platform built for secure upload, preview, download, and expiring share links.
+This project was built for self-learning and hands-on full-stack practice, covering API design, authentication, cloud file storage, file sharing, testing, and frontend development. The repository includes both local development setup and production-level deployment setup.
 
-This project was built for self-learning and hands-on practice across a full-stack workflow, including API design, authentication, cloud file storage, sharing, testing, and frontend development.
-The repo includes local development setup for both backend and frontend.
+## Current Stack
 
-## What it does
+- Backend: Java, Spring Boot, Spring Security, JPA/Hibernate
+- Frontend: React, Vite
+- Database: PostgreSQL for persistent data storage (local container or AWS RDS)
+- Object Storage: AWS S3
+- Cache/Rate Limit Store: Redis
+- Containerization: Docker + Docker Compose
+- Reverse Proxy / TLS: Caddy (optional compose profile)
 
-- User registration and login
-- Email verification flow (token by email)
-- Forgot password flow (email reset link + token-based reset)
-- Upload, list, download, and delete files
-- Direct browser-to-S3 uploads using presigned URLs
-- Rename file in cloud (s3) with metadata/share-link rekey
-- File previews in the UI (image, PDF, text-like files)
-- Create and revoke share links
+## Core Features
 
-Sample UI
-<img width="2265" height="1242" alt="image" src="https://github.com/user-attachments/assets/7e3402a4-c2fb-4019-9200-a0d2d39769b6" />
+- JWT-based authentication and BCrypt password hashing
+- Email verification and password reset via SMTP
+- Direct browser-to-S3 upload via presigned URL
+- File preview for image / PDF / text-like files
+- Expiring share links + revoke support
+- Redis-backed API rate limiting (auth/upload/public-share endpoints)
 
+## Feature Breakdown + API Endpoints
 
-## Feature breakdown
+### 1) Authentication and account flows
+- Register account, login, verify email, resend verification, forgot/reset password.
+- Uses JWT for authenticated API access and BCrypt for password hashing.
 
-### 1. File upload, download, and preview
-- Files are uploaded directly from browser to S3 using presigned PUT URLs.
-- Backend finalizes uploads by validating object ownership and saving metadata.
-- Users can only access their own files and view basic metadata such as file size and uploaded time.
-- Preview is supported in the dashboard for image, PDF, and text-like files.
-- Download and delete actions are permission-scoped to file ownership.
+Endpoints:
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/verify?token=...`
+- `POST /api/auth/resend-verification`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
 
-### 1.1 Direct upload flow (presigned URL)
-1. `POST /api/files/upload/presigned` returns `{ s3Key, uploadUrl, method }`.
-2. Frontend uploads bytes directly to S3 using the returned URL.
-3. `POST /api/files/upload/complete` persists metadata after S3 object verification.
+### 2) File management
+- Upload file content to S3 and persist file metadata in PostgreSQL, then list, rename, delete, and download owned files.
+- Supports direct browser-to-S3 upload through presigned URLs.
 
-### 1.2 Real cloud rename
-- `PATCH /api/files/{id}` performs S3 rename via copy + delete.
-- File metadata (`s3Key`, `originalName`) is updated after successful S3 operation.
-- Share links pointing to the old key are rekeyed to the new key.
+Endpoints:
+- `POST /api/files/upload/presigned` (direct upload URL)
+- `POST /api/files/upload/complete` (finalize metadata after S3 upload)
+- `GET /api/files` (list, supports `page` and `size`)
+- `GET /api/files/{id}`
+- `PATCH /api/files/{id}` (rename/update metadata)
+- `DELETE /api/files/{id}`
+- `GET /api/files/s3` (list owned S3 objects)
+- `DELETE /api/files/s3?key=...`
+- `GET /api/files/s3/download?key=...`
 
-### 2. Share links
-- Users can create share links from existing uploaded files.
-- Share links can be listed with metadata such as status and expiration.
-- Links can be revoked to immediately stop access.
-- This flow separates private file ownership from controlled sharing access.
+### 3) Share links
+- Create expiring share links for owned files, list active links, revoke links, and access shared files publicly.
 
-### 3. Authentication and secure access
-- Login uses JWT tokens for stateless API authentication.
-- Passwords are stored with BCrypt hashing.
-- Access control is enforced so users operate only on their own file/share data.
-- Accounts must verify email before login is allowed.
-- Register and forgot-password UI use a 10-second cooldown after sending email links.
+Endpoints:
+- `POST /api/shares`
+- `GET /api/shares`
+- `DELETE /api/shares/{id}`
+- `GET /api/shares/public/{token}` (public metadata/preview info)
+- `GET /api/shares/public/{token}/download` (public download)
+- `GET /s/{token}` (short public download URL)
 
-### 3.1 Auth endpoints
-- `POST /api/auth/register` creates a new account (or refreshes unverified account) and sends verification link.
-- `GET /api/auth/verify?token=...` verifies account email.
-- `POST /api/auth/resend-verification` resends verification email for unverified accounts.
-- `POST /api/auth/forgot-password` sends a reset link (generic success response).
-- `POST /api/auth/reset-password` sets a new password using reset token.
+### 4) Rate limiting and reliability
+- Redis-backed rate limiting is applied to sensitive/public endpoints (auth, upload, public share access).
+- Limits are configurable from `application.yml` / `application-prod.yml` and env vars.
+- Current key strategy uses requester IP and, when available, email identity.
 
-## Stack
+### 5) Deployment and operations
+- Dockerized services: backend, frontend, postgres, redis, optional caddy.
+- Docker-first deployment setup suitable for EC2, ECS, and EKS with environment-driven configuration.
 
-- Java + Spring Boot
-- React + Vite
-- Gradle
-- AWS S3
-- H2 (local) / PostgreSQL (runtime option)
+## Setup
 
-## Local setup
+### 1) Redis Rate Limiting
 
-1. Run the backend:
+CloudShare uses Redis to store distributed rate-limit counters.
+
+Important env vars:
+
+- `APP_RATE_LIMIT_ENABLED=true`
+- `APP_RATE_LIMIT_FAIL_OPEN=false`
+- `SPRING_DATA_REDIS_HOST`
+- `SPRING_DATA_REDIS_PORT`
+- `SPRING_DATA_REDIS_PASSWORD`
+
+Upload limiter is configurable from YAML/env (example):
+
+- `APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_LIMIT=3`
+- `APP_RATE_LIMIT_FILES_UPLOAD_PRESIGNED_WINDOW=15m`
+- `APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_LIMIT=3`
+- `APP_RATE_LIMIT_FILES_UPLOAD_LEGACY_WINDOW=15m`
+
+Quick check:
+
 ```bash
-./gradlew clean test
-./gradlew bootRun
+docker compose exec redis redis-cli ping
 ```
 
-2. Run the frontend:
+Expected output: `PONG`
+
+---
+
+### 2) Docker Setup (Local + AWS Deployment)
+
+Service topology used by `compose.yaml`:
+
+- `db`: PostgreSQL (persistent relational data store)
+- `redis`: rate-limit store
+- `backend`: Spring Boot API
+- `frontend`: Nginx serving the Vite build
+- `caddy` (optional): reverse proxy + HTTPS with `--profile edge`
+
+Create env files:
+
 ```bash
-cd frontend
-npm ci
-npm run dev
+cp .env_example .env
+cp frontend/.env.example frontend/.env
 ```
 
-3. If needed, set frontend API URL in `frontend/.env`:
-```env
-VITE_API_BASE_URL=http://localhost:8080
-```
+Set core `.env` values:
 
-Default URLs:
-- Backend: `http://localhost:8080`
-- Frontend: `http://localhost:5173`
+- `DOCKER_SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/fileshare`
+- `DOCKER_SPRING_DATASOURCE_USERNAME=postgres`
+- `DOCKER_SPRING_DATASOURCE_PASSWORD=postgres`
+- `APP_JWT_SECRET=<long_random_secret>`
+- `APP_AWS_REGION=<region>`
+- `APP_AWS_S3_BUCKET=<bucket_name>`
+- `APP_AWS_ACCESS_KEY=<access_key>`
+- `APP_AWS_SECRET_KEY=<secret_key>`
+- `SPRING_MAIL_USERNAME=<smtp_user>`
+- `SPRING_MAIL_PASSWORD=<smtp_password_or_app_password>`
+- `SPRING_DATA_REDIS_PASSWORD=` (blank if no password)
 
-Frontend routes:
-- `/verify-email?token=...`
-- `/forgot-password`
-- `/reset-password?token=...`
+Run locally:
 
-Note:
-- Local deployment can share documents only with devices on the same Wi-Fi/LAN.
-- `localhost` links are not accessible from external networks.
-
-### Local PostgreSQL setup (`application.yml`)
-If you want to run locally with PostgreSQL (pgAdmin), first create the database:
-```sql
-CREATE DATABASE fileshare;
-```
-
-Then configure datasource values in `src/main/resources/application.yml`:
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/fileshare
-    driverClassName: org.postgresql.Driver
-    username: postgres
-    password: your_postgres_password
-```
-
-You can also keep credentials in environment variables:
 ```bash
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/fileshare
-SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=<your_password>
+docker compose up --build
 ```
 
-Table creation is handled automatically on startup by JPA/Hibernate (`spring.jpa.hibernate.ddl-auto=update`).
+Production note (AWS deployment: EC2/ECS/EKS):
 
-### Change `localhost` to LAN IP (for same Wi-Fi sharing)
-1. Find your PC IPv4 address:
+- Use real URLs/domains and production secrets in `.env`.
+- Typical production values:
+- `SPRING_PROFILES_ACTIVE=prod`
+- `SPRING_DATASOURCE_URL=jdbc:postgresql://<rds-endpoint>:5432/<db>`
+- `SPRING_DATASOURCE_USERNAME=<rds_user>`
+- `SPRING_DATASOURCE_PASSWORD=<rds_password>`
+- `SPRING_DATA_REDIS_HOST=<redis-host>`
+- `SPRING_DATA_REDIS_PORT=6379`
+- `APP_PUBLIC_BASE_URL=https://<backend-domain>`
+- `APP_VERIFICATION_BASE_URL=https://<frontend-domain>`
+- `APP_PASSWORD_RESET_BASE_URL=https://<frontend-domain>`
+- `APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://www.<frontend-domain>`
+- Create `infra/caddy/Caddyfile` with your domain routing before running edge profile.
+
+Deploy (example with Docker host like EC2):
+
 ```bash
-ipconfig
-```
-Use the active adapter IPv4 (example: `192.168.1.25`).
-
-2. Set backend public base URL:
-```bash
-APP_PUBLIC_BASE_URL=http://192.168.1.25:8080
-```
-If you use `.properties` directly:
-```properties
-app.public-base-url=http://192.168.1.25:8080
+docker compose up --build -d
+docker compose --profile edge up --build -d
 ```
 
-3. Allow frontend origin in CORS:
-```bash
-APP_CORS_ALLOWED_ORIGINS=http://192.168.1.25:5173,http://localhost:5173
-```
+---
 
-4. Restart backend and create a new share link.
+### 3) S3 CORS Requirement (Must include frontend URL)
 
-5. Make sure firewall allows inbound TCP `8080` (and `5173` if frontend is accessed from other devices).
-
-## Real Deployment
-This section shows the real deployment configuration used to run CloudShare with production infrastructure (PostgreSQL, AWS S3, and strict CORS).
-Use Spring profile `prod` to load `application-prod.yml` overrides.
-
-### 1. Set active profile
-```bash
-SPRING_PROFILES_ACTIVE=prod
-```
-
-### 2. Set required environment variables
-```bash
-SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<db>
-SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-SPRING_DATASOURCE_USERNAME=<db_user>
-SPRING_DATASOURCE_PASSWORD=<db_password>
-
-APP_JWT_SECRET=<long_random_secret>
-APP_AWS_S3_BUCKET=<bucket_name>
-APP_AWS_ACCESS_KEY=<aws_access_key>
-APP_AWS_SECRET_KEY=<aws_secret_key>
-APP_AWS_S3_PRESIGN_PUT_TTL_MINUTES=10
-
-APP_PUBLIC_BASE_URL=https://<backend-domain>
-APP_VERIFICATION_BASE_URL=https://<frontend-domain>
-APP_VERIFICATION_TOKEN_TTL_MINUTES=30
-APP_PASSWORD_RESET_BASE_URL=https://<frontend-domain>
-APP_PASSWORD_RESET_TOKEN_TTL_MINUTES=30
-APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://www.<frontend-domain>
-
-SPRING_MAIL_HOST=smtp.gmail.com
-SPRING_MAIL_PORT=587
-SPRING_MAIL_USERNAME=<smtp_username>
-SPRING_MAIL_PASSWORD=<smtp_password_or_app_password>
-SPRING_MAIL_SMTP_AUTH=true
-SPRING_MAIL_SMTP_STARTTLS_ENABLE=true
-```
-
-### 3. Start backend in production mode
-```bash
-java -Dspring.profiles.active=prod -jar build/libs/FileShare-0.0.1-SNAPSHOT.jar
-```
-
-## S3 CORS requirement for direct upload
-Because uploads are sent from browser directly to S3, bucket CORS must allow your frontend origin and `PUT`.
+Because upload is direct from browser to S3, your bucket CORS must allow your frontend origin.
 
 Example:
+
 ```json
 [
   {
     "AllowedHeaders": ["*"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
-    "AllowedOrigins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "https://<your-frontend-domain>"
+    ],
     "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 3000
   }
 ]
 ```
 
-## Project structure
+If `AllowedOrigins` does not include your frontend URL, browser upload to S3 will fail.
+
+---
+
+## Project Structure
 
 ```text
 src/                  Spring Boot backend
 frontend/             React frontend
+compose.yaml          Multi-service Docker setup
+Dockerfile            Backend image
+frontend/Dockerfile   Frontend image
 ```
