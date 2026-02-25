@@ -12,8 +12,8 @@
 - Database: PostgreSQL for persistent data storage (local container or AWS RDS)
 - Object Storage: AWS S3
 - Cache/Rate Limit Store: Redis
-- Containerization: Docker + Docker Compose
-- Reverse Proxy / TLS: Caddy (optional compose profile)
+- Containerization: Docker
+- Reverse Proxy / TLS: Caddy (optional)
 
 ## Core Features
 
@@ -178,7 +178,6 @@ Example:
     "AllowedHeaders": ["*"],
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedOrigins": [
-      "http://localhost:5173",
       "https://<your-frontend-domain>"
     ],
     "ExposeHeaders": ["ETag"],
